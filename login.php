@@ -38,9 +38,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // 5. Redirect berdasarkan role
             if ($_SESSION['role'] == 'admin') {
-                header("Location: mainpageadmin.php");
+                header("Location: mainpage.php");
             } else {
-                header("Location: mainpageuser.php");
+                header("Location: mainpage.php");
             }
             exit();
 

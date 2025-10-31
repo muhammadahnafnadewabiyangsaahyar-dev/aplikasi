@@ -24,6 +24,7 @@ $absen_id = (int)$_GET['absen_id'];
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <?php include 'navbar.php'; ?>
     <div class="content-container" style="text-align: center; max-width: 500px; margin: 50px auto;">
         <h2>Konfirmasi Lembur</h2>
         <p>Absen keluar Anda (ID: <?php echo $absen_id; ?>) telah berhasil dicatat.</p>

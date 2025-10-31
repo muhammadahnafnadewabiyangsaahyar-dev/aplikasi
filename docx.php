@@ -79,8 +79,7 @@ $user_data = $stmt_user->fetch(PDO::FETCH_ASSOC);
 
 if (!$user_data) {
     // Pengguna tidak ditemukan (meskipun ada sesi?), ini aneh
-    mysqli_close($conn);
-     header('Location: index.php?error=penggunatidakditemukan');
+    header('Location: index.php?error=penggunatidakditemukan');
     exit;
 }
 
@@ -143,16 +142,11 @@ if (empty($user_data['tanda_tangan_file'])) {
         exit;
     }
 
-    // !!! UPDATE tabel register !!!
+    // !!! UPDATE tabel register dengan PDO !!!
     $sql_update_ttd = "UPDATE register SET tanda_tangan_file = ? WHERE id = ?";
-    $stmt_update_ttd = mysqli_prepare($conn, $sql_update_ttd);
-    mysqli_stmt_bind_param($stmt_update_ttd, "si", $nama_file_ttd_baru, $user_id_session);
-    mysqli_stmt_execute($stmt_update_ttd);
-    mysqli_stmt_close($stmt_update_ttd);
-    // (Tambahkan error handling jika perlu)
-
+    $stmt_update_ttd = $pdo->prepare($sql_update_ttd);
+    $stmt_update_ttd->execute([$nama_file_ttd_baru, $user_id_session]);
     $nama_file_ttd_final = $nama_file_ttd_baru; // Gunakan nama file baru ini
-
 } else {
     // --- SUDAH ADA TTD: Gunakan yang lama ---
     $nama_file_ttd_final = $user_data['tanda_tangan_file']; 
@@ -179,17 +173,15 @@ $TBS->Show(OPENTBS_FILE, $path_simpan_surat); // Simpan ke file
 // Cek apakah file berhasil disimpan (opsional tapi bagus)
 if (!file_exists($path_simpan_surat)) {
      header('Location: suratizin.php?error=gagalsimpansurat');
-     mysqli_close($conn);
     exit;
 }
 
-// 12. Simpan Data Pengajuan ke Database `pengajuan_izin`
+// 12. Simpan Data Pengajuan ke Database `pengajuan_izin` dengan PDO
 $sql_insert = "INSERT INTO pengajuan_izin 
                 (user_id, perihal, tanggal_mulai, tanggal_selesai, lama_izin, alasan, file_surat, tanda_tangan_file, status) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending')"; // Status default Pending
-$stmt_insert = mysqli_prepare($conn, $sql_insert);
-// Tipe data: i (integer), s (string), s, s, i, s, s, s
-mysqli_stmt_bind_param($stmt_insert, "isssisss", 
+$stmt_insert = $pdo->prepare($sql_insert);
+$stmt_insert->execute([
     $user_id_session, 
     $perihal_form,
     $tanggal_mulai_form,
@@ -197,26 +189,20 @@ mysqli_stmt_bind_param($stmt_insert, "isssisss",
     $lama_izin_form,
     $alasan_form,
     $nama_file_surat,       // Simpan nama file saja
-    $nama_file_ttd          // Simpan nama file saja
-);
+    $nama_file_ttd_final    // Simpan nama file saja
+]);
 
 // 13. Eksekusi INSERT dan Redirect
-if (mysqli_stmt_execute($stmt_insert)) {
+if ($stmt_insert) {
     // Jika INSERT berhasil, arahkan ke dashboard user dengan pesan sukses
-    mysqli_stmt_close($stmt_insert);
-    mysqli_close($conn);
-    header('Location: mainpageuser.php?status=sukses'); // Ganti jika nama file beda
+    header('Location: mainpage.php?status=sukses'); // Ganti jika nama file beda
     exit;
 } else {
     // Jika INSERT gagal
-    $error_msg = mysqli_error($conn);
-    mysqli_stmt_close($stmt_insert);
-    mysqli_close($conn);
     // Hapus file yang sudah terlanjur disimpan jika insert gagal (opsional)
     if (file_exists($path_simpan_ttd)) unlink($path_simpan_ttd);
     if (file_exists($path_simpan_surat)) unlink($path_simpan_surat);
-     header('Location: suratizin.php?error=gagalinsertdb&msg=' . urlencode($error_msg));
+     header('Location: suratizin.php?error=gagalinsertdb');
     exit;
 }
-
 ?>

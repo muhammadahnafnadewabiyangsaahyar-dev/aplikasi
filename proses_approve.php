@@ -12,8 +12,6 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role
 
 // --- Muat Dependensi & Koneksi ---
 include 'connect.php'; 
-// !!! PENTING: Jika menggunakan Composer, sertakan autoload PHPMailer !!!
-// Jika download manual, sesuaikan path include PHPMailer
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
@@ -48,40 +46,29 @@ if ($action == 'approve') {
     exit;
 }
 
-// === UPDATE DATABASE ===
-$conn->begin_transaction(); // Mulai transaksi
+// === UPDATE DATABASE (PDO) ===
+$pdo->beginTransaction();
 
 try {
     $sql_update = "UPDATE pengajuan_izin SET status = ? WHERE id = ? AND status = 'Pending'"; // Update hanya jika masih pending
-    $stmt_update = mysqli_prepare($conn, $sql_update);
-    mysqli_stmt_bind_param($stmt_update, "si", $new_status, $pengajuan_id);
-
-    if (!mysqli_stmt_execute($stmt_update)) {
-        throw new Exception("Gagal mengupdate status: " . mysqli_error($conn));
-    }
-    
+    $stmt_update = $pdo->prepare($sql_update);
+    $stmt_update->execute([$new_status, $pengajuan_id]);
     // Cek apakah ada baris yang terpengaruh (mencegah update ganda)
-    if (mysqli_stmt_affected_rows($stmt_update) == 0) {
+    if ($stmt_update->rowCount() == 0) {
          throw new Exception("Pengajuan tidak ditemukan atau sudah diproses.");
     }
-    mysqli_stmt_close($stmt_update);
 
     // === AMBIL INFO USER UNTUK NOTIFIKASI ===
     $sql_user_info = "SELECT r.email, r.no_whatsapp, r.nama_lengkap 
                       FROM pengajuan_izin p 
                       JOIN register r ON p.user_id = r.id 
                       WHERE p.id = ?";
-    $stmt_user_info = mysqli_prepare($conn, $sql_user_info);
-    mysqli_stmt_bind_param($stmt_user_info, "i", $pengajuan_id);
-    mysqli_stmt_execute($stmt_user_info);
-    $result_user_info = mysqli_stmt_get_result($stmt_user_info);
-    $user_info = mysqli_fetch_assoc($result_user_info);
-    mysqli_stmt_close($stmt_user_info);
-
+    $stmt_user_info = $pdo->prepare($sql_user_info);
+    $stmt_user_info->execute([$pengajuan_id]);
+    $user_info = $stmt_user_info->fetch(PDO::FETCH_ASSOC);
     if (!$user_info) {
         throw new Exception("Gagal mengambil info user untuk notifikasi.");
     }
-        
     $user_email = $user_info['email'];
     $user_wa = $user_info['no_whatsapp']; 
     $user_nama = $user_info['nama_lengkap'];
@@ -143,14 +130,12 @@ try {
     
 
     // Jika semua berhasil sampai sini
-    $conn->commit(); // Konfirmasi semua perubahan database
+    $pdo->commit(); // Konfirmasi semua perubahan database
     echo json_encode(['success' => true, 'message' => 'Status berhasil diubah dan notifikasi dijadwalkan.']);
 
 } catch (Exception $e) {
-    $conn->rollback(); // Batalkan perubahan database jika ada error
+    $pdo->rollBack(); // Batalkan perubahan database jika ada error
     error_log("Proses Approve Error [ID: {$pengajuan_id}]: " . $e->getMessage()); // Catat error di log server
     echo json_encode(['success' => false, 'message' => 'Terjadi kesalahan: ' . $e->getMessage()]);
 }
-
-mysqli_close($conn);
 ?>

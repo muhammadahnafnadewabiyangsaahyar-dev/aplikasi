@@ -2,48 +2,66 @@ document.addEventListener('DOMContentLoaded', function() {
     const editSignatureBtn = document.getElementById('edit-signature-btn');
     const editSignatureContainer = document.getElementById('edit-signature-container');
     const cancelEditSignatureBtn = document.getElementById('cancel-edit-signature');
-    const editSignaturePad = document.getElementById('edit-signature-pad');
+    const editSignaturePadCanvas = document.getElementById('edit-signature-pad');
     const clearNewSignatureBtn = document.getElementById('clear-new-signature');
     const editSignatureDataInput = document.getElementById('edit-signature-data');
     const editSignatureForm = document.getElementById('edit-signature-form');
-    if (!editSignatureBtn || !editSignatureContainer || !editSignaturePad || !clearNewSignatureBtn || !editSignatureDataInput || !editSignatureForm) return;
-    let isDrawing = false;
-    let lastX = 0;
-    let lastY = 0;
-    const ctx = editSignaturePad.getContext('2d');
-    function startDrawing(e) {
-        isDrawing = true;
-        [lastX, lastY] = [e.offsetX, e.offsetY];
+    let signaturePad = null;
+
+    // Tampilkan form edit saat tombol "Ubah Tanda Tangan" diklik
+    if (editSignatureBtn && editSignatureContainer) {
+        editSignatureBtn.addEventListener('click', function() {
+            editSignatureContainer.style.display = 'block';
+            if (editSignatureForm) editSignatureForm.style.display = 'block';
+            // Inisialisasi SignaturePad jika belum
+            if (editSignaturePadCanvas && !signaturePad) {
+                signaturePad = new SignaturePad(editSignaturePadCanvas, {
+                    penColor: 'rgb(0,0,0)'
+                });
+                resizeCanvas();
+            } else if (signaturePad) {
+                signaturePad.clear();
+            }
+        });
     }
-    function draw(e) {
-        if (!isDrawing) return;
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 2;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(lastX, lastY);
-        ctx.lineTo(e.offsetX, e.offsetY);
-        ctx.stroke();
-        [lastX, lastY] = [e.offsetX, e.offsetY];
+
+    // Sembunyikan form edit saat tombol "Batal" diklik
+    if (cancelEditSignatureBtn && editSignatureContainer) {
+        cancelEditSignatureBtn.addEventListener('click', function() {
+            editSignatureContainer.style.display = 'none';
+            if (editSignatureForm) editSignatureForm.style.display = 'none';
+            if (signaturePad) signaturePad.clear();
+        });
     }
-    function stopDrawing() {
-        isDrawing = false;
+
+    // Hapus tanda tangan baru saat tombol "Hapus" diklik
+    if (clearNewSignatureBtn && editSignaturePadCanvas) {
+        clearNewSignatureBtn.addEventListener('click', function() {
+            if (signaturePad) signaturePad.clear();
+        });
     }
-    editSignaturePad.addEventListener('mousedown', startDrawing);
-    editSignaturePad.addEventListener('mousemove', draw);
-    editSignaturePad.addEventListener('mouseup', stopDrawing);
-    editSignaturePad.addEventListener('mouseout', stopDrawing);
-    clearNewSignatureBtn.addEventListener('click', function() {
-        ctx.clearRect(0, 0, editSignaturePad.width, editSignaturePad.height);
-    });
-    editSignatureBtn.addEventListener('click', function() {
-        editSignatureContainer.style.display = 'block';
-    });
-    cancelEditSignatureBtn.addEventListener('click', function() {
-        editSignatureContainer.style.display = 'none';
-    });
-    editSignatureForm.addEventListener('submit', function(e) {
-        const dataURL = editSignaturePad.toDataURL();
-        editSignatureDataInput.value = dataURL;
-    });
+
+    // Simpan data tanda tangan ke input hidden saat submit
+    if (editSignatureForm && editSignaturePadCanvas) {
+        editSignatureForm.addEventListener('submit', function(e) {
+            if (signaturePad && !signaturePad.isEmpty()) {
+                const dataURL = signaturePad.toDataURL('image/png');
+                editSignatureDataInput.value = dataURL;
+            } else {
+                alert('Mohon gambar tanda tangan baru Anda.');
+                e.preventDefault();
+            }
+        });
+    }
+
+    // Resize canvas agar tajam di semua device
+    function resizeCanvas() {
+        if (!editSignaturePadCanvas) return;
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        editSignaturePadCanvas.width = editSignaturePadCanvas.offsetWidth * ratio;
+        editSignaturePadCanvas.height = editSignaturePadCanvas.offsetHeight * ratio;
+        editSignaturePadCanvas.getContext('2d').scale(ratio, ratio);
+        if (signaturePad) signaturePad.clear();
+    }
+    window.addEventListener('resize', resizeCanvas);
 });

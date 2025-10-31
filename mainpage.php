@@ -29,8 +29,6 @@ if ($is_admin) {
     <title>Document</title>
 </head>
 <body>
-    <div class="headercontainer">
-        <img class="logo" src="logo.png" alt="Logo">
         <?php include 'navbar.php'; ?>
     </div>
     <div class="main-title">Teman KAORI</div>

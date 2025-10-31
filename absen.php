@@ -39,7 +39,6 @@ $home_url = ($_SESSION['role'] ?? '') === 'admin' ? 'mainpageadmin.php' : 'mainp
 </head>
 <body>
     <div class="headercontainer">
-        <img class="logo" src="logo.png" alt="Logo">
         <?php include 'navbar.php'; ?>
     </div>
     <div class="main-title">Absensi Harian</div>

@@ -27,19 +27,7 @@ $home_url = 'mainpageadmin.php';
 </head>
 <body>
     <div class="headercontainer">
-        <img class="logo" src="logo.png" alt="Logo">
-        <div class="nav-links">
-            <a href="<?php echo $home_url; ?>" class="home">Home</a>
-            <a href="approve.php" class="surat">Surat Izin</a>
-            <a href="profileadmin.php" class="profile">Profile</a>
-            <a href="absen.php" class="absensi">Absensi</a>
-            <a href="view_user.php" class="viewusers">Daftar Pengguna</a>
-            <a href="view_absensi.php" class="viewabsensi">Daftar Absensi</a>
-            <a href="rekapabsen.php" class="rekapabsen">Rekap Absensi</a>
-            <a href="slipgaji.php" class="slipgaji">Slip Gaji</a>
-            <a href="approve_lembur.php" class="approvelembur">Approve Lembur</a>
-            <a href="logout.php" class="logout">Logout</a>
-        </div>
+        <?php include 'navbar.php'; ?>
     </div>
     <div class="main-title">Teman KAORI</div>
     <div class="subtitle-container">

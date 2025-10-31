@@ -33,7 +33,6 @@ if ($user_ttd_data) {
 </head>
 <body>
     <div class="headercontainer">
-        <img class="logo" src="logo.png" alt="Logo">
         <?php include 'navbar.php'; ?>
     </div>
     <div class="main-title">Teman KAORI</div>
@@ -120,5 +119,32 @@ if ($user_ttd_data) {
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@5.0.10/dist/signature_pad.umd.min.js"></script> 
     <script src="script_izin.js"></script>
     <script src="script_ubah_ttd.js"></script>
+    <script>
+    // Otomatis hitung lama izin (hari) setelah memilih tanggal
+    document.addEventListener('DOMContentLoaded', function() {
+        const tglMulai = document.getElementById('tanggal_izin');
+        const tglSelesai = document.getElementById('tanggal_selesai');
+        const lamaIzin = document.getElementById('lama_izin');
+        function hitungLamaIzin() {
+            if (tglMulai.value && tglSelesai.value) {
+                const start = new Date(tglMulai.value);
+                const end = new Date(tglSelesai.value);
+                if (!isNaN(start) && !isNaN(end) && end >= start) {
+                    // +1 agar inklusif (misal: 1-1-2025 s/d 2-1-2025 = 2 hari)
+                    const diff = Math.floor((end - start) / (1000*60*60*24)) + 1;
+                    lamaIzin.value = diff;
+                } else {
+                    lamaIzin.value = '';
+                }
+            } else {
+                lamaIzin.value = '';
+            }
+        }
+        if (tglMulai && tglSelesai && lamaIzin) {
+            tglMulai.addEventListener('change', hitungLamaIzin);
+            tglSelesai.addEventListener('change', hitungLamaIzin);
+        }
+    });
+    </script>
 </footer>
 </html>

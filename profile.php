@@ -2,8 +2,8 @@
 session_start();
 include 'connect.php'; // Ini memuat $pdo
 
-// Keamanan: Pastikan hanya admin yang bisa akses
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
+// Keamanan: Pastikan hanya user yang sudah login yang bisa akses
+if (!isset($_SESSION['user_id'])) {
     header('Location: index.php?error=unauthorized');
     exit;
 }
@@ -65,7 +65,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     $email = $_POST['email'] ?? '';
     $no_wa = $_POST['no_wa'] ?? '';
     $outlet = $_POST['outlet'] ?? '';
-    $posisi = $_POST['posisi'] ?? '';
     $username = $_POST['username'] ?? '';
 
     // Validasi sederhana (opsional tapi disarankan)
@@ -73,10 +72,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
         $profile_error = "Nama Lengkap, Email, dan Username tidak boleh kosong.";
     } else {
         try {
-            $sql_update_profile = "UPDATE register SET nama_lengkap = ?, email = ?, no_whatsapp = ?, outlet = ?, posisi = ?, username = ? WHERE id = ?";
+            $sql_update_profile = "UPDATE register SET nama_lengkap = ?, email = ?, no_whatsapp = ?, outlet = ?, username = ? WHERE id = ?";
             $stmt_update_profile = $pdo->prepare($sql_update_profile);
             
-            if ($stmt_update_profile->execute([$nama_lengkap, $email, $no_wa, $outlet, $posisi, $username, $user_id])) {
+            if ($stmt_update_profile->execute([$nama_lengkap, $email, $no_wa, $outlet, $username, $user_id])) {
                 // Update data di SESSION agar langsung berubah di halaman
                 $_SESSION['nama_lengkap'] = $nama_lengkap;
                 $_SESSION['username'] = $username;
@@ -137,10 +136,7 @@ $home_url = 'mainpageadmin.php';
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
 </head>
 <body>
-    <div class="headercontainer">
-        <img class="logo" src="logo.png" alt="Logo">
-        <?php include 'navbar.php'; ?>
-    </div>
+    <?php include 'navbar.php'; ?>
     <div class="main-title">Profil Admin</div>
     <div class="subtitle-container">
         <p class="subtitle">Kelola informasi profil dan keamanan akun Anda.</p>
@@ -152,10 +148,16 @@ $home_url = 'mainpageadmin.php';
             <h2>Informasi Profil</h2>
             
             <div class="profile-picture-container">
-                <img src="uploads/<?php echo htmlspecialchars($user_data['foto_profil'] ?? 'default.png'); ?>" 
-                     alt="Foto Profil" 
-                     id="profile-pic-preview"
-                     onerror="this.src='uploads/default.png';"> </div>
+                <?php if (!empty($user_data['foto_profil'])): ?>
+                    <img src="uploads/<?php echo htmlspecialchars($user_data['foto_profil']); ?>" 
+                         alt="Foto Profil" 
+                         id="profile-pic-preview"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+                    <span style="display:none;"><i class="fa fa-user" style="font-size: 100px; color: #bbb;"></i></span>
+                <?php else: ?>
+                    <i class="fa fa-user" style="font-size: 100px; color: #bbb;"></i>
+                <?php endif; ?>
+            </div>
             
             <div class="upload-container">
                 <p>Ganti Foto Profil (Max 2MB, JPG/PNG):</p>
@@ -164,7 +166,7 @@ $home_url = 'mainpageadmin.php';
 
             <hr>
 
-            <form action="profileadmin.php" method="POST" autocomplete="off">
+            <form action="profile.php" method="POST" autocomplete="off">
                 <?php if ($profile_success): ?><p class="success-message"><?php echo $profile_success; ?></p><?php endif; ?>
                 <?php if ($profile_error): ?><p class="error-message"><?php echo $profile_error; ?></p><?php endif; ?>
 
@@ -185,21 +187,23 @@ $home_url = 'mainpageadmin.php';
                     <label>No. WhatsApp</label>
                 </div>
                 <div class="input-group">
-                    <input type="text" name="posisi" value="<?php echo htmlspecialchars($user_data['posisi']); ?>">
-                    <label>Posisi</label>
-                </div>
-                <div class="input-group">
                     <input type="text" name="outlet" value="<?php echo htmlspecialchars($user_data['outlet']); ?>">
                     <label>Outlet</label>
                 </div>
                 <button type="submit" name="update_profile" class="btn">Update Profil</button>
             </form>
+
+            <!-- Tampilkan posisi hanya sebagai teks -->
+            <div class="input-group">
+                <input type="text" value="<?php echo htmlspecialchars($user_data['posisi']); ?>" readonly disabled>
+                <label>Posisi</label>
+            </div>
         </div>
 
         <div class="profile-column-right">
             <h2>Keamanan</h2>
             
-            <form action="profileadmin.php" method="POST" autocomplete="off">
+            <form action="profile.php" method="POST" autocomplete="off">
                 <h3>Ganti Password</h3>
                 <?php if ($password_success): ?><p class="success-message"><?php echo $password_success; ?></p><?php endif; ?>
                 <?php if ($password_error): ?><p class="error-message"><?php echo $password_error; ?></p><?php endif; ?>

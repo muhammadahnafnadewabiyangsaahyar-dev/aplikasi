@@ -1,0 +1,10 @@
+uploads/
+*.log
+*.tmp
+*.bak
+.DS_Store
+vendor/
+.env
+.idea/
+.vscode/
+node_modules/
