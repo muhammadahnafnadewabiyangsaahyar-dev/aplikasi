@@ -47,13 +47,7 @@ include 'connect.php';
     <div class="content-container" style="text-align: center;">
         <p>Arahkan wajah Anda ke kamera. Sistem akan memverifikasi lokasi Anda secara otomatis.</p>
 
-<video id="camera-stream" autoplay playsinline muted style="display: none;"></video>
-<canvas id="photo-canvas" width="640" height="480" style="display: none;"></canvas>
-
-<button type="button" id="capture-btn" style="display: none;">Ambil Foto</button>
-
-<p id="location-info" class="status-message">Meminta izin akses lokasi...</p>
-<p id="error-message" class="status-message">Meminta izin akses kamera...</p>
+        <video id="camera-preview" autoplay playsinline muted></video> <canvas id="snapshot-canvas" width="640" height="480"></canvas> <p id="status-message" class="status-message">Meminta izin akses kamera dan lokasi...</p>
 
         <form id="absensi-form" method="POST" action="proses_absensi.php">
             <input type="hidden" name="latitude" id="latitude">
