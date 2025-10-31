@@ -6,21 +6,14 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role
     header('Location: index.php'); 
     exit;
 }
+$home_url = 'mainpageadmin.php';
 $sql_absensi = "SELECT a.id, a.tanggal_absensi, a.waktu_masuk, a.waktu_keluar, a.status_lokasi, a.foto_absen, r.nama_lengkap 
                 FROM absensi a 
                 JOIN register r ON a.user_id = r.id 
                 ORDER BY a.tanggal_absensi DESC, a.waktu_masuk DESC";
-$result_absensi = mysqli_query($conn, $sql_absensi);
-// Siapkan array untuk menampung data
-$daftar_absensi = [];
-if ($result_absensi && mysqli_num_rows($result_absensi) > 0) {
-    while ($row = mysqli_fetch_assoc($result_absensi)) {
-        $daftar_absensi[] = $row;
-    }
-} else if (!$result_absensi) {
-    // Handle error jika query gagal
-    echo "Error mengambil data absensi: " . mysqli_error($conn);
-}
+$stmt_absensi = $pdo->prepare($sql_absensi);
+$stmt_absensi->execute();
+$daftar_absensi = $stmt_absensi->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -88,7 +81,6 @@ if ($result_absensi && mysqli_num_rows($result_absensi) > 0) {
             <p>Belum ada data absensi.</p>
         <?php endif; ?>
     </div>
-        <?php mysqli_close($conn); // Tutup koneksi di akhir body ?>
     </body>
     <footer>
     <div class="footer-container">

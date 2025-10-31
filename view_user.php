@@ -8,15 +8,11 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
     exit;
 }
 
-// Ambil semua data pengguna (kecuali mungkin admin super?)
-// Untuk saat ini, kita ambil semua
-$sql_select = "SELECT id, nama_lengkap, posisi, outlet, no_whatsapp, email, username, role 
-               FROM register";
-$result_select = mysqli_query($conn, $sql_select);
-
-if (!$result_select) {
-    die("Error mengambil data: " . mysqli_error($conn));
-}
+// Ambil semua data pengguna
+$sql_select = "SELECT id, nama_lengkap, posisi, outlet, no_whatsapp, email, username, role FROM register";
+$stmt_select = $pdo->prepare($sql_select);
+$stmt_select->execute();
+$result_select = $stmt_select->fetchAll(PDO::FETCH_ASSOC);
 
 $home_url = 'mainpageadmin.php';
 ?>
@@ -35,8 +31,13 @@ $home_url = 'mainpageadmin.php';
         <div class="nav-links">
             <a href="<?php echo $home_url; ?>" class="home">Home</a>
             <a href="approve.php" class="surat">Surat Izin</a>
-            <a href="approve_lembur.php" class="lembur">Approve Lembur</a>
+            <a href="profileadmin.php" class="profile">Profile</a>
+            <a href="absen.php" class="absensi">Absensi</a>
             <a href="view_user.php" class="viewusers">Daftar Pengguna</a>
+            <a href="view_absensi.php" class="viewabsensi">Daftar Absensi</a>
+            <a href="rekapabsen.php" class="rekapabsen">Rekap Absensi</a>
+            <a href="slipgaji.php" class="slipgaji">Slip Gaji</a>
+            <a href="approve_lembur.php" class="approvelembur">Approve Lembur</a>
             <a href="logout.php" class="logout">Logout</a>
         </div>
     </div>
@@ -68,39 +69,21 @@ $home_url = 'mainpageadmin.php';
                         <th>Email</th>
                         <th>Username</th>
                         <th>Role</th>
-                        <th>Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (mysqli_num_rows($result_select) > 0): ?>
-                        <?php while ($data = mysqli_fetch_assoc($result_select)): ?>
-                            <tr>
-                                <td><?php echo $data['id']; ?></td>
-                                <td><?php echo htmlspecialchars($data['nama_lengkap']); ?></td>
-                                <td><?php echo htmlspecialchars($data['posisi']); ?></td>
-                                <td><?php echo htmlspecialchars($data['outlet']); ?></td>
-                                <td><?php echo htmlspecialchars($data['no_whatsapp']); ?></td>
-                                <td><?php echo htmlspecialchars($data['email']); ?></td>
-                                <td><?php echo htmlspecialchars($data['username']); ?></td>
-                                <td><?php echo htmlspecialchars($data['role']); ?></td>
-                                
-                                <td class="action-buttons">
-                                    <a href="edit_user.php?id=<?php echo $data['id']; ?>" class="btn-edit">Edit</a>
-                                    
-                                    <form action="delete_user.php" method="POST" style="display:inline;" 
-                                          onsubmit="return confirm('Anda yakin ingin menghapus pengguna: <?php echo htmlspecialchars(addslashes($data['nama_lengkap'])); ?>?');">
-                                          
-                                        <input type="hidden" name="user_id" value="<?php echo $data['id']; ?>">
-                                        <button type="submit" class="btn-delete">Delete</button>
-                                    </form>
-                                    </td>
-                            </tr>
-                        <?php endwhile; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="9" style="text-align: center;">Tidak ada data pengguna.</td>
-                        </tr>
-                    <?php endif; ?>
+                    <?php foreach ($result_select as $user): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($user['id']); ?></td>
+                        <td><?php echo htmlspecialchars($user['nama_lengkap']); ?></td>
+                        <td><?php echo htmlspecialchars($user['posisi']); ?></td>
+                        <td><?php echo htmlspecialchars($user['outlet']); ?></td>
+                        <td><?php echo htmlspecialchars($user['no_whatsapp']); ?></td>
+                        <td><?php echo htmlspecialchars($user['email']); ?></td>
+                        <td><?php echo htmlspecialchars($user['username']); ?></td>
+                        <td><?php echo htmlspecialchars($user['role']); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
@@ -113,6 +96,3 @@ $home_url = 'mainpageadmin.php';
     </div>
 </footer>
 </html>
-<?php
-mysqli_close($conn);
-?>

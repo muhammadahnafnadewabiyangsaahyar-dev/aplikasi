@@ -57,6 +57,7 @@ $home_url = 'mainpageadmin.php'; // Admin pasti ke mainpageadmin
             <a href="view_absensi.php" class="viewabsensi">Daftar Absensi</a>
             <a href="rekapabsen.php" class="rekapabsen">Rekap Absensi</a>
             <a href="slipgaji.php" class="slipgaji">Slip Gaji</a>
+            <a href="approve_lembur.php" class="approvelembur">Approve Lembur</a>
             <a href="logout.php" class="logout">Logout</a>
         </div>
     </div>

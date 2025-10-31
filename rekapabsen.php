@@ -18,52 +18,17 @@ $sql = ""; // Inisialisasi string SQL
 // 3. Tentukan Kueri Berdasarkan Peran
 if ($user_role == 'admin') {
     // Admin: Ambil semua data absensi + nama pengguna
-    $sql = "
-        SELECT a.id, a.tanggal_absensi, a.waktu_masuk, a.waktu_keluar, a.status_lokasi, a.foto_absen, r.nama_lengkap 
-        FROM absensi a 
-        JOIN register r ON a.user_id = r.id 
-        ORDER BY a.tanggal_absensi DESC, a.waktu_masuk DESC
-    ";
-    // Jalankan query biasa (karena tidak ada input user langsung)
-    $result = mysqli_query($conn, $sql); 
-
+    $sql = "SELECT a.*, r.nama_lengkap FROM absensi a JOIN register r ON a.user_id = r.id ORDER BY a.tanggal_absensi DESC, a.waktu_masuk DESC";
+    $stmt = $pdo->query($sql);
+    $daftar_absensi = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } else {
     // User Biasa: Ambil hanya data absensi milik sendiri (Gunakan Prepared Statement)
-    $sql = "
-        SELECT id, tanggal_absensi, waktu_masuk, waktu_keluar, status_lokasi, foto_absen 
-        FROM absensi 
-        WHERE user_id = ? 
-        ORDER BY tanggal_absensi DESC, waktu_masuk DESC
-    ";
-    $stmt = mysqli_prepare($conn, $sql);
-    if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "i", $user_id);
-        mysqli_stmt_execute($stmt);
-        $result = mysqli_stmt_get_result($stmt); // Dapatkan hasil dari statement
-        // Tidak perlu menutup statement di sini jika result masih dipakai
-    } else {
-        // Handle error prepare statement
-        echo "Error preparing statement: " . mysqli_error($conn);
-        $result = false; // Set result ke false
-    }
+    $sql = "SELECT * FROM absensi WHERE user_id = ? ORDER BY tanggal_absensi DESC, waktu_masuk DESC";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$user_id]);
+    $daftar_absensi = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
-
-// 4. Ambil Hasil ke Array (jika query berhasil)
-if ($result) {
-    while ($row = mysqli_fetch_assoc($result)) {
-        $daftar_absensi[] = $row;
-    }
-    // Jika menggunakan prepared statement, tutup setelah fetch selesai
-    if (isset($stmt)) {
-         mysqli_stmt_close($stmt);
-    }
-} else if ($user_role == 'admin') { 
-    // Handle error query admin jika perlu
-    echo "Error executing admin query: " . mysqli_error($conn);
-}
-// Jangan tutup $conn di sini jika masih dipakai di HTML/Footer
-
-// Hapus baris ini: mysqli_query($conn, "SET NAMES 'utf8'"); 
+// Tidak perlu tutup $pdo di sini
 ?>
 <!DOCTYPE html>
 <html lang="en">

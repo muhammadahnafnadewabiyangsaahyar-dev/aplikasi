@@ -14,10 +14,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 3. Validasi Input
     if (!isset($_POST['absen_id']) || !filter_var($_POST['absen_id'], FILTER_VALIDATE_INT) || !isset($_POST['action'])) {
-        header('Location: approve_lembur.php?error=datakosong');
+        header('Location: approve_lembur.php?error=invalid_input');
         exit;
     }
-    
     $absen_id = (int)$_POST['absen_id'];
     $action = $_POST['action']; // 'approve' atau 'reject'
     $new_status_lembur = '';
@@ -25,51 +24,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Tentukan status baru berdasarkan aksi
     if ($action == 'approve') {
-        $new_status_lembur = 'Approved'; // (Pastikan 'Approved' ada di ENUM Anda)
+        $new_status_lembur = 'Approved';
         $pesan_sukses = 'lembur_disetujui';
     } elseif ($action == 'reject') {
-        $new_status_lembur = 'Rejected'; // (Pastikan 'Rejected' ada di ENUM Anda)
+        $new_status_lembur = 'Rejected';
         $pesan_sukses = 'lembur_ditolak';
     } else {
-        header('Location: approve_lembur.php?error=aksitidakvalid');
+        header('Location: approve_lembur.php?error=invalid_action');
         exit;
     }
 
-    // 4. Update status lembur di database
-    // Update hanya jika statusnya masih 'Pending' untuk mencegah aksi ganda
+    // 4. Update status lembur di database (hanya jika status masih Pending)
     $sql_update = "UPDATE absensi SET status_lembur = ? WHERE id = ? AND status_lembur = 'Pending'";
-    $stmt_update = mysqli_prepare($conn, $sql_update);
-    
-    if ($stmt_update) {
-        mysqli_stmt_bind_param($stmt_update, "si", $new_status_lembur, $absen_id);
-        
-        if (mysqli_stmt_execute($stmt_update)) {
-            // Cek apakah ada baris yang benar-benar terupdate
-            if (mysqli_stmt_affected_rows($stmt_update) > 0) {
-                // Berhasil update
-                $pesan_status = 'status=' . $pesan_sukses;
-            } else {
-                // Tidak ada baris yang terupdate (mungkin sudah diproses orang lain)
-                $pesan_status = 'error=sudahdiproses';
-            }
-        } else {
-            // Gagal eksekusi
-            $pesan_status = 'error=dbupdate&msg=' . urlencode(mysqli_stmt_error($stmt_update));
-        }
-        mysqli_stmt_close($stmt_update);
-    } else {
-        // Gagal prepare
-        $pesan_status = 'error=dbprepare&msg=' . urlencode(mysqli_error($conn));
-    }
-    
-    mysqli_close($conn);
+    $stmt_update = $pdo->prepare($sql_update);
+    $stmt_update->execute([$new_status_lembur, $absen_id]);
+
     // Arahkan kembali ke halaman approve lembur dengan pesan status
-    header('Location: approve_lembur.php?' . $pesan_status);
+    header('Location: approve_lembur.php?status=' . $pesan_sukses);
     exit;
 
 } else {
-    // Jika bukan metode POST
-    header('Location: approve_lembur.php?error=invalidmethod');
+    header('Location: approve_lembur.php?error=invalid_method');
     exit;
 }
 ?>

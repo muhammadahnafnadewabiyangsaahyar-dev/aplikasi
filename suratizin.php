@@ -14,23 +14,12 @@ include 'connect.php';
 // Ambil HANYA kolom tanda tangan untuk logika if/else
 $tanda_tangan_tersimpan = null; // Default
 $sql_user_ttd = "SELECT tanda_tangan_file FROM register WHERE id = ?";
-$stmt_user_ttd = mysqli_prepare($conn, $sql_user_ttd);
-
-if ($stmt_user_ttd) {
-    mysqli_stmt_bind_param($stmt_user_ttd, "i", $user_id); 
-    mysqli_stmt_execute($stmt_user_ttd);
-    $result_user_ttd = mysqli_stmt_get_result($stmt_user_ttd);
-    $user_ttd_data = mysqli_fetch_assoc($result_user_ttd);
-    
-    if ($user_ttd_data) {
-        $tanda_tangan_tersimpan = $user_ttd_data['tanda_tangan_file'];
-    }
-    mysqli_stmt_close($stmt_user_ttd);
-} else {
-    // Handle error prepare statement jika perlu
-    error_log("Gagal prepare statement untuk ambil TTD: " . mysqli_error($conn));
+$stmt_user_ttd = $pdo->prepare($sql_user_ttd);
+$stmt_user_ttd->execute([$user_id]);
+$user_ttd_data = $stmt_user_ttd->fetch(PDO::FETCH_ASSOC);
+if ($user_ttd_data) {
+    $tanda_tangan_tersimpan = $user_ttd_data['tanda_tangan_file'];
 }
-// Tidak perlu tutup $conn di sini jika masih dipakai di bawah (misal oleh footer?)
 ?>
 
 <!DOCTYPE html>
@@ -45,24 +34,7 @@ if ($stmt_user_ttd) {
 <body>
     <div class="headercontainer">
         <img class="logo" src="logo.png" alt="Logo">
-        <div class="nav-links">
-            <a href="<?php echo $home_url; ?>" class="home">Home</a>
-            <?php if ($_SESSION['role'] == 'admin'): ?>
-                <a href="approve.php" class="surat">Surat Izin</a>
-                <a href="profileadmin.php" class="profile">Profile</a>
-                <a href="view_user.php" class="viewusers">Daftar Pengguna</a>
-                <a href="view_absensi.php" class="viewabsensi">Daftar Absensi</a>
-                <a href="rekapabsen.php" class="rekapabsen">Rekap Absensi</a>
-                <a href="slipgaji.php" class="slipgaji">Slip Gaji</a>
-            <?php else: ?>
-                <a href="suratizin.php" class="surat">Surat Izin</a>
-                <a href="profile.php" class="profile">Profile</a>
-                <a href="absen.php" class="absensi">Absensi</a>
-                <a href="rekapabsen.php" class="rekap">Rekap Absen</a>
-                <a href="slipgaji.php" class="slip">Slip Gaji</a>
-            <?php endif; ?>
-            <a href="logout.php" class="logout">Logout</a>
-        </div>
+        <?php include 'navbar.php'; ?>
     </div>
     <div class="main-title">Teman KAORI</div>
     <div class="subtitle-container">
@@ -150,4 +122,3 @@ if ($stmt_user_ttd) {
     <script src="script_ubah_ttd.js"></script>
 </footer>
 </html>
-<?php mysqli_close($conn); // Tutup koneksi di akhir ?>

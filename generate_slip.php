@@ -13,51 +13,33 @@ function getNamaBulan($bulan) {
 
 // 2. Keamanan: Cek Login
 if (!isset($_SESSION['user_id'])) {
-    die("Akses ditolak. Anda harus login."); 
+    header('Location: index.php?error=notloggedin');
+    exit();
 } 
 $user_id = $_SESSION['user_id'];
 $user_role = $_SESSION['role'];
 
 // 3. Ambil & Validasi Parameter GET
 if (!isset($_GET['id']) || !filter_var($_GET['id'], FILTER_VALIDATE_INT)) {
-    die("Error: ID riwayat gaji tidak valid.");
+    die('ID slip gaji tidak valid.');
 }
 $riwayat_gaji_id = (int)$_GET['id'];
 // $format = $_GET['format'] ?? 'docx'; // Format PDF belum didukung
 
-// 4. Ambil Data Detail Slip Gaji dari Database
-// Pastikan semua nama kolom di SELECT cocok dengan tabel riwayat_gaji Anda
-$sql = "SELECT rg.*, r.nama_lengkap, r.posisi 
-        FROM riwayat_gaji rg 
-        JOIN register r ON rg.register_id = r.id 
-        WHERE rg.id = ?"; 
-// Tambah filter keamanan untuk non-admin
+// 4. Ambil Data Detail Slip Gaji dari Database (PDO)
+$sql = "SELECT rg.*, r.nama_lengkap, r.posisi FROM riwayat_gaji rg JOIN register r ON rg.user_id = r.id WHERE rg.id = ?";
+$params = [$riwayat_gaji_id];
 if ($user_role != 'admin') {
-    $sql .= " AND rg.register_id = ?";
+    $sql .= " AND rg.user_id = ?";
+    $params[] = $user_id;
 }
-
-$stmt = mysqli_prepare($conn, $sql);
-if (!$stmt) {
-     mysqli_close($conn);
-    die("Error preparing statement: " . mysqli_error($conn));
-}
-
-// Bind parameter(s)
-if ($user_role != 'admin') {
-    mysqli_stmt_bind_param($stmt, "ii", $riwayat_gaji_id, $user_id); 
-} else {
-    mysqli_stmt_bind_param($stmt, "i", $riwayat_gaji_id); 
-}
-
-mysqli_stmt_execute($stmt);
-$result = mysqli_stmt_get_result($stmt);
-$slip_data = mysqli_fetch_assoc($result);
-mysqli_stmt_close($stmt);
-mysqli_close($conn); 
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$slip_data = $stmt->fetch(PDO::FETCH_ASSOC);
 
 // 5. Cek Jika Data Slip Ditemukan
 if (!$slip_data) {
-    die("Error: Data slip gaji tidak ditemukan atau Anda tidak berhak mengaksesnya.");
+    die('Data slip gaji tidak ditemukan atau Anda tidak berhak mengaksesnya.');
 }
 
 // --- Mulai Proses OpenTBS ---

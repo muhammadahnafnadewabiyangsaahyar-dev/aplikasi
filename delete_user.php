@@ -22,8 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 // 3. Ambil data dari POST dan validasi
 if (!isset($_POST['user_id']) || !filter_var($_POST['user_id'], FILTER_VALIDATE_INT)) {
-    // Redirect jika ID tidak valid
-    header('Location: view_user.php?error=invalid_id');
+    header('Location: view_user.php?error=invalid_userid');
     exit;
 }
 $user_id_to_delete = (int)$_POST['user_id'];
@@ -31,34 +30,17 @@ $admin_id = (int)$_SESSION['user_id'];
 
 // 4. Bonus Keamanan Logika: Jangan biarkan admin menghapus dirinya sendiri
 if ($user_id_to_delete == $admin_id) {
-    header("Location: view_user.php?error=self_delete");
+    header('Location: view_user.php?error=cannot_delete_self');
     exit;
 }
 
-// 5. Lakukan penghapusan menggunakan prepared statement (Kode asli Anda sudah aman di sini)
+// 5. Lakukan penghapusan menggunakan prepared statement PDO
 $sql_delete = "DELETE FROM register WHERE id = ?";
-$stmt_delete = mysqli_prepare($conn, $sql_delete);
+$stmt_delete = $pdo->prepare($sql_delete);
+$stmt_delete->execute([$user_id_to_delete]);
 
-if ($stmt_delete) {
-    mysqli_stmt_bind_param($stmt_delete, "i", $user_id_to_delete);
-    mysqli_stmt_execute($stmt_delete);
-    
-    // Cek apakah ada baris yang terhapus
-    if (mysqli_stmt_affected_rows($stmt_delete) > 0) {
-        header("Location: view_user.php?status=delete_success");
-    } else {
-        header("Location: view_user.php?error=user_not_found");
-    }
-    mysqli_stmt_close($stmt_delete);
-    
-} else {
-    // Gagal prepare statement
-    header("Location: view_user.php?error=db_error");
-}
-
-mysqli_close($conn);
+header('Location: view_user.php?success=deleted');
 exit;
-
 // ========================================================
 // --- AKHIR BLOK PERBAIKAN ---
 // ========================================================

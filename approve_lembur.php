@@ -2,8 +2,9 @@
 session_start();
 include 'connect.php';
 
-// 1. Keamanan: Pastikan hanya admin yang bisa akses
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
+// 1. Keamanan: Pastikan hanya admin dengan posisi HR, Finance, atau Owner yang bisa akses
+$allowed_positions = ['HR', 'Finance', 'Owner', 'superadmin'];
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin' || !isset($_SESSION['posisi']) || !in_array(strtolower($_SESSION['posisi']), array_map('strtolower', $allowed_positions))) {
     header('Location: index.php?error=unauthorized');
     exit;
 }
@@ -13,7 +14,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
 // ========================================================
 // Proses aksi (approve/reject) HANYA jika metodenya POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    
     if (isset($_POST['action']) && isset($_POST['absen_id'])) {
         $action = $_POST['action'];
         $absen_id = (int)$_POST['absen_id'];
@@ -25,19 +25,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $new_status = 'Rejected';
         }
 
-        // Pastikan status valid dan gunakan prepared statement
+        // Pastikan status valid dan gunakan prepared statement PDO
         if (!empty($new_status)) {
             $sql_update = "UPDATE absensi SET status_lembur = ? WHERE id = ?";
-            $stmt_update = mysqli_prepare($conn, $sql_update);
-            
-            if ($stmt_update) {
-                mysqli_stmt_bind_param($stmt_update, "si", $new_status, $absen_id);
-                mysqli_stmt_execute($stmt_update);
-                mysqli_stmt_close($stmt_update);
-            }
-            
+            $stmt_update = $pdo->prepare($sql_update);
+            $stmt_update->execute([$new_status, $absen_id]);
             // Redirect kembali ke halaman ini (PRG Pattern)
-            // untuk mencegah re-submit form jika user me-refresh halaman
             header("Location: approve_lembur.php?status=success");
             exit;
         }
@@ -47,7 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // --- AKHIR BLOK PERBAIKAN ---
 // ========================================================
 
-
 // Ambil data lembur yang masih 'Pending' untuk ditampilkan
 // (JOIN dengan tabel register untuk mendapatkan nama_lengkap)
 $sql_select = "SELECT a.id, r.nama_lengkap, a.tanggal_absensi, a.waktu_masuk, a.waktu_keluar 
@@ -55,12 +47,9 @@ $sql_select = "SELECT a.id, r.nama_lengkap, a.tanggal_absensi, a.waktu_masuk, a.
                JOIN register r ON a.user_id = r.id 
                WHERE a.status_lembur = 'Pending'
                ORDER BY a.tanggal_absensi DESC";
-
-$result_select = mysqli_query($conn, $sql_select);
-
-if (!$result_select) {
-    die("Error mengambil data: " . mysqli_error($conn));
-}
+$stmt_select = $pdo->prepare($sql_select);
+$stmt_select->execute();
+$result_select = $stmt_select->fetchAll(PDO::FETCH_ASSOC);
 
 $home_url = ($_SESSION['role'] == 'admin') ? 'mainpageadmin.php' : 'mainpageuser.php';
 ?>
@@ -79,8 +68,13 @@ $home_url = ($_SESSION['role'] == 'admin') ? 'mainpageadmin.php' : 'mainpageuser
         <div class="nav-links">
             <a href="<?php echo $home_url; ?>" class="home">Home</a>
             <a href="approve.php" class="surat">Surat Izin</a>
-            <a href="approve_lembur.php" class="lembur">Approve Lembur</a>
+            <a href="profileadmin.php" class="profile">Profile</a>
+            <a href="absen.php" class="absensi">Absensi</a>
             <a href="view_user.php" class="viewusers">Daftar Pengguna</a>
+            <a href="view_absensi.php" class="viewabsensi">Daftar Absensi</a>
+            <a href="rekapabsen.php" class="rekapabsen">Rekap Absensi</a>
+            <a href="slipgaji.php" class="slipgaji">Slip Gaji</a>
+            <a href="approve_lembur.php" class="approvelembur">Approve Lembur</a>
             <a href="logout.php" class="logout">Logout</a>
         </div>
     </div>
@@ -105,8 +99,8 @@ $home_url = ($_SESSION['role'] == 'admin') ? 'mainpageadmin.php' : 'mainpageuser
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (mysqli_num_rows($result_select) > 0): ?>
-                        <?php while ($data = mysqli_fetch_assoc($result_select)): ?>
+                    <?php if (count($result_select) > 0): ?>
+                        <?php foreach ($result_select as $data): ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($data['nama_lengkap']); ?></td>
                                 <td><?php echo htmlspecialchars($data['tanggal_absensi']); ?></td>
@@ -126,7 +120,7 @@ $home_url = ($_SESSION['role'] == 'admin') ? 'mainpageadmin.php' : 'mainpageuser
                                     </form>
                                 </td>
                                 </tr>
-                        <?php endwhile; ?>
+                        <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
                             <td colspan="5" style="text-align: center;">Tidak ada pengajuan lembur yang menunggu persetujuan.</td>
@@ -144,7 +138,3 @@ $home_url = ($_SESSION['role'] == 'admin') ? 'mainpageadmin.php' : 'mainpageuser
     </div>
 </footer>
 </html>
-<?php
-// Tutup koneksi di akhir
-mysqli_close($conn);
-?>

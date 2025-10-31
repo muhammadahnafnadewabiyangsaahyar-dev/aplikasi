@@ -203,11 +203,9 @@ if ($current_user_role == 'admin' && $_SERVER['REQUEST_METHOD'] === 'POST' && is
 // Ambil daftar user untuk dropdown (hanya admin)
 $daftar_user = [];
 if ($current_user_role == 'admin') {
-    $sql_users = "SELECT id, nama_lengkap FROM register WHERE role = 'user'";
-    $result_users = mysqli_query($conn, $sql_users);
-    while ($row_user = mysqli_fetch_assoc($result_users)) {
-        $daftar_user[] = $row_user;
-    }
+    $sql_user = "SELECT id, nama_lengkap FROM register ORDER BY nama_lengkap ASC";
+    $stmt_user = $pdo->query($sql_user);
+    $daftar_user = $stmt_user->fetchAll(PDO::FETCH_ASSOC);
 }
 
 // Ambil data riwayat gaji untuk ditampilkan
@@ -216,22 +214,10 @@ if ($current_user_role == 'admin' && isset($_GET['user_id']) && !empty($_GET['us
     $user_id_to_view = (int)$_GET['user_id'];
 }
 
-$sql_riwayat = "SELECT rg.*, r.nama_lengkap 
-                FROM riwayat_gaji rg 
-                JOIN register r ON rg.register_id = r.id
-                WHERE rg.register_id = ?
-                ORDER BY rg.periode_tahun DESC, rg.periode_bulan DESC";
-$stmt_riwayat = mysqli_prepare($conn, $sql_riwayat);
-mysqli_stmt_bind_param($stmt_riwayat, "i", $user_id_to_view);
-mysqli_stmt_execute($stmt_riwayat);
-$result_riwayat = mysqli_stmt_get_result($stmt_riwayat);
-
-$riwayat_gaji = [];
-while ($row_riwayat = mysqli_fetch_assoc($result_riwayat)) {
-    $riwayat_gaji[] = $row_riwayat;
-}
-mysqli_stmt_close($stmt_riwayat);
-
+$sql_riwayat = "SELECT rg.*, r.nama_lengkap FROM riwayat_gaji rg JOIN register r ON rg.user_id = r.id WHERE rg.user_id = ? ORDER BY rg.periode_tahun DESC, rg.periode_bulan DESC";
+$stmt_riwayat = $pdo->prepare($sql_riwayat);
+$stmt_riwayat->execute([$user_id_to_view]);
+$riwayat_gaji = $stmt_riwayat->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -388,6 +374,3 @@ mysqli_stmt_close($stmt_riwayat);
     </div>
 </footer>
 </html>
-<?php
-mysqli_close($conn);
-?>

@@ -4,6 +4,19 @@ if (!isset($_SESSION['username'])) {
     header('Location: index.php');
     exit();
 }
+include 'connect.php';
+
+$is_admin = (isset($_SESSION['role']) && $_SESSION['role'] === 'admin');
+$daftar_pengguna = [];
+if ($is_admin) {
+    try {
+        $sql_users = "SELECT id, nama_lengkap, username, email, role, time_created FROM register ORDER BY time_created DESC";
+        $stmt = $pdo->query($sql_users);
+        $daftar_pengguna = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $error_pengguna = "Error mengambil data pengguna: " . $e->getMessage();
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -18,22 +31,14 @@ if (!isset($_SESSION['username'])) {
 <body>
     <div class="headercontainer">
         <img class="logo" src="logo.png" alt="Logo">
-        <div class="nav-links">
-            <a href="<?php echo $home_url; ?>" class="home">Home</a>
-            <a href="suratizin.php" class="surat">Surat Izin</a>
-            <a href="profile.php" class="profile">Profile</a>
-            <a href="absen.php" class="absensi">Absensi</a>
-            <a href="rekapabsen.php" class="rekap">Rekap Absen</a>
-            <a href="slipgaji.php" class="slip">Slip Gaji</a>
-            <a href="logout.php" class="logout">Logout</a>
-        </div>
+        <?php include 'navbar.php'; ?>
     </div>
     <div class="main-title">Teman KAORI</div>
     <div class="subtitle-container">
         <p class="subtitle">Selamat Datang, <?php echo htmlspecialchars($_SESSION['username']); ?> [<?php echo htmlspecialchars($_SESSION['role']); ?>][<?php echo htmlspecialchars($_SESSION['nama_lengkap']); ?>]</p>
     </div>
     <div class="content-container">
-        <p class="content-text">Ini adalah halaman utama untuk admin KAORI Indonesia. Gunakan navigasi di atas untuk mengakses fitur-fitur yang tersedia.</p>
+        <p class="content-text">Ini adalah halaman utama KAORI Indonesia. Gunakan navigasi di atas untuk mengakses fitur-fitur yang tersedia.</p>
     </div>
 </body>
 <footer>

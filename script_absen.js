@@ -117,60 +117,82 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 1. Cek dulu apakah tombol absen ada di halaman
     if (btnAbsen) {
-        // Tombol ada, berarti belum absen keluar
-
-        // 2. Nonaktifkan tombol saat halaman dimuat
+        // Tombol ada, berarti belum absen keluar atau absensi belum selesai
         btnAbsen.disabled = true;
-        
-        // 3. Ambil tipe absen dari tombol
-        tipeAbsenSaatIni = btnAbsen.getAttribute('data-tipe');
-        
-        // 4. Jalankan deteksi lokasi
+        tipeAbsenSaatIni = btnAbsen.getAttribute('data-tipe') || 'masuk';
         setupLokasi();
-
-        // 5. Jika absen masuk, jalankan kamera. Jika absen keluar, kamera tidak perlu.
         if (tipeAbsenSaatIni === 'masuk') {
             startCamera();
-        } else {
-            // Untuk absen keluar, lokasi saja sudah cukup
+            btnAbsen.textContent = 'Absen Masuk';
+        } else if (tipeAbsenSaatIni === 'keluar') {
             statusLokasi.textContent = "Mendeteksi lokasi Anda untuk absen keluar...";
-            // (Kita tetap biarkan tombol disabled sampai lokasi didapat)
+            btnAbsen.textContent = 'Absen Keluar';
+        } else {
+            // Sudah absen masuk & keluar, disable tombol
+            btnAbsen.disabled = true;
+            btnAbsen.textContent = 'Absensi Selesai';
         }
-
-        // 6. Tambahkan Event Listener ke Tombol
-        btnAbsen.addEventListener('click', () => {
-            
-            // Pastikan lokasi sudah ada
+        btnAbsen.addEventListener('click', async () => {
             if (!koordinatPengguna) {
                 alert("Lokasi belum siap. Mohon tunggu atau izinkan lokasi.");
                 return;
             }
-            
-            // Tampilkan loading
             btnAbsen.disabled = true;
             btnAbsen.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Memproses...';
-            
             let fotoBase64 = null;
-            
-            // Ambil foto HANYA jika absen masuk
             if (tipeAbsenSaatIni === 'masuk') {
                 fotoBase64 = ambilFoto();
-                stopCamera(); // Matikan kamera setelah foto diambil
+                stopCamera();
             }
-
-            // Isi form tersembunyi
             inputLat.value = koordinatPengguna.latitude;
             inputLon.value = koordinatPengguna.longitude;
             inputTipe.value = tipeAbsenSaatIni;
-            inputFoto.value = fotoBase64; // Akan kosong (null) jika absen keluar, dan itu tidak apa-apa
-            
-            // Kirim form
-            formAbsensi.submit();
+            inputFoto.value = fotoBase64;
+
+            // --- SUBMIT VIA AJAX ---
+            const formData = new FormData(formAbsensi);
+            try {
+                const response = await fetch('proses_absensi.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    if (result.next === 'keluar') {
+                        window.ubahTombolAbsen('keluar');
+                        tipeAbsenSaatIni = 'keluar';
+                        statusLokasi.textContent = 'Silakan lakukan absen keluar saat pulang.';
+                    } else if (result.next === 'done') {
+                        window.ubahTombolAbsen('done');
+                        statusLokasi.textContent = 'Absensi hari ini sudah selesai.';
+                    }
+                    btnAbsen.disabled = false;
+                } else {
+                    alert(result.message || 'Terjadi error.');
+                    window.location.reload();
+                }
+            } catch (e) {
+                alert('Gagal mengirim absensi. Silakan coba lagi.');
+                window.location.reload();
+            }
         });
-        
     } else {
-        // Tombol tidak ada, berarti sudah absen keluar
         statusLokasi.textContent = "Absensi hari ini sudah selesai.";
+    }
+
+    // --- Fitur: Ubah tombol otomatis setelah absen masuk tanpa reload ---
+    window.ubahTombolAbsen = function(tipe) {
+        if (!btnAbsen) return;
+        if (tipe === 'keluar') {
+            btnAbsen.setAttribute('data-tipe', 'keluar');
+            btnAbsen.textContent = 'Absen Keluar';
+            btnAbsen.disabled = false;
+            // Kamera tidak perlu diaktifkan lagi
+        } else if (tipe === 'done') {
+            btnAbsen.setAttribute('data-tipe', 'done');
+            btnAbsen.textContent = 'Absensi Selesai';
+            btnAbsen.disabled = true;
+        }
     }
 
     // Membersihkan stream kamera jika pengguna meninggalkan halaman

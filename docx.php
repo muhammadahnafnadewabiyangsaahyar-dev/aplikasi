@@ -70,15 +70,12 @@ if (!empty($signature_data_base64)) {
     exit;
 }
 
-// 5. Ambil Data Pegawai Lengkap dari Database
-$user_data = null; // Inisialisasi
-$sql_user = "SELECT id, nama_lengkap, posisi, outlet FROM register WHERE id = ?";
-$stmt_user = mysqli_prepare($conn, $sql_user);
-mysqli_stmt_bind_param($stmt_user, "i", $user_id_session);
-mysqli_stmt_execute($stmt_user);
-$result_user = mysqli_stmt_get_result($stmt_user);
-$user_data = mysqli_fetch_assoc($result_user);
-mysqli_stmt_close($stmt_user);
+// 5. Ambil Data Pegawai Lengkap dari Database (PDO)
+$user_data = null;
+$sql_user = "SELECT * FROM register WHERE id = ?";
+$stmt_user = $pdo->prepare($sql_user);
+$stmt_user->execute([$user_id_session]);
+$user_data = $stmt_user->fetch(PDO::FETCH_ASSOC);
 
 if (!$user_data) {
     // Pengguna tidak ditemukan (meskipun ada sesi?), ini aneh

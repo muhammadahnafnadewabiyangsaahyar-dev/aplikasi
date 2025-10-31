@@ -11,8 +11,21 @@ $nama_pengguna = $_SESSION['nama_lengkap'] ?? $_SESSION['username']; // Ambil na
 
 // 2. Muat Koneksi (jika diperlukan untuk data lain di halaman ini, misal header dinamis)
 include 'connect.php'; 
-// Tidak perlu ambil daftar cabang lagi
+include 'absen_helper.php';
 
+// Cek status absen hari ini
+$absen_status = getAbsenStatusToday($pdo, $user_id);
+$tipe_default = 'masuk';
+$label_default = 'Absen Masuk';
+if ($absen_status['masuk'] && !$absen_status['keluar']) {
+    $tipe_default = 'keluar';
+    $label_default = 'Absen Keluar';
+} elseif ($absen_status['masuk'] && $absen_status['keluar']) {
+    $tipe_default = 'done';
+    $label_default = 'Absensi Selesai';
+}
+
+$home_url = ($_SESSION['role'] ?? '') === 'admin' ? 'mainpageadmin.php' : 'mainpageuser.php';
 ?>
 
 <!DOCTYPE html>
@@ -27,17 +40,7 @@ include 'connect.php';
 <body>
     <div class="headercontainer">
         <img class="logo" src="logo.png" alt="Logo">
-        <div class="nav-links">
-            <a href="<?php echo $home_url; ?>" class="home">Home</a>
-            <a href="approve.php" class="surat">Surat Izin</a>
-            <a href="profileadmin.php" class="profile">Profile</a>
-            <a href="absen.php" class="absensi">Absensi</a>
-            <a href="view_user.php" class="viewusers">Daftar Pengguna</a>
-            <a href="view_absensi.php" class="viewabsensi">Daftar Absensi</a>
-            <a href="rekapabsen.php" class="rekapabsen">Rekap Absensi</a>
-            <a href="slipgaji.php" class="slipgaji">Slip Gaji</a>
-            <a href="logout.php" class="logout">Logout</a>
-        </div>
+        <?php include 'navbar.php'; ?>
     </div>
     <div class="main-title">Absensi Harian</div>
     <div class="subtitle-container">
@@ -47,24 +50,22 @@ include 'connect.php';
     <div class="content-container" style="text-align: center;">
         <p>Arahkan wajah Anda ke kamera. Sistem akan memverifikasi lokasi Anda secara otomatis.</p>
 
-<video id="camera-stream" autoplay playsinline muted style="display: none; border: 1px solid #ccc;"></video>
-<canvas id="photo-canvas" width="640" height="480" style="display: none; border: 1px solid #ccc;"></canvas>
+<video id="kamera-preview" autoplay playsinline muted style="border: 1px solid #ccc;"></video>
+<canvas id="kamera-canvas" width="640" height="480" style="display: none; border: 1px solid #ccc;"></canvas>
 
-<button type="button" id="capture-btn" style="display: none; margin-top: 10px;">Ambil Foto</button>
+<p id="status-lokasi" class="status-message" style="color: orange;">Meminta izin akses lokasi...</p>
 
-<p id="location-info" class="status-message" style="color: orange;">Meminta izin akses lokasi...</p>
-<p id="error-message" class="status-message" style="color: red;">Meminta izin akses kamera...</p>
+        <form id="form-absensi" method="POST" action="proses_absensi.php">
+            <input type="hidden" name="latitude" id="input-latitude">
+            <input type="hidden" name="longitude" id="input-longitude">
+            <input type="hidden" name="foto_absensi_base64" id="input-foto-base64">
+            <input type="hidden" name="tipe_absen" id="input-tipe-absen">
 
-        <form id="absensi-form" method="POST" action="proses_absensi.php">
-            <input type="hidden" name="latitude" id="latitude">
-            <input type="hidden" name="longitude" id="longitude">
-            <input type="hidden" name="foto_absensi_base64" id="foto_absensi_base64">
-            <input type="hidden" name="tipe_absen" id="tipe_absen">
-
-            <div class="button-group">
-                <button type="button" id="btn-absen-masuk" disabled>Absen Masuk</button>
-                <button type="button" id="btn-absen-keluar" disabled>Absen Keluar</button>
-            </div>
+            <?php if ($tipe_default !== 'done'): ?>
+                <button type="button" id="btn-absen" data-tipe="<?php echo $tipe_default; ?>" disabled><?php echo $label_default; ?></button>
+            <?php else: ?>
+                <button type="button" id="btn-absen" disabled><?php echo $label_default; ?></button>
+            <?php endif; ?>
         </form>
          <?php if(isset($_GET['error'])): ?>
             <p class="error-message">Error: <?php echo htmlspecialchars($_GET['error']); ?> 

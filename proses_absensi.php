@@ -1,37 +1,25 @@
 <?php
 session_start();
-include 'connect.php'; // Menggunakan koneksi PDO
+include 'connect.php';
+include 'absen_helper.php';
+header('Content-Type: application/json');
 
-// --- Fungsi Bantu: Hitung Jarak Haversine ---
-function haversineGreatCircleDistance(
-  $latitudeFrom, $longitudeFrom, $latitudeTo, $longitudeTo, $earthRadius = 6371000)
-{
-  if (!is_numeric($latitudeFrom) || !is_numeric($longitudeFrom) || !is_numeric($latitudeTo) || !is_numeric($longitudeTo)) {
-    return false;
-  }
-  $latFrom = deg2rad((float)$latitudeFrom);
-  $lonFrom = deg2rad((float)$longitudeFrom);
-  $latTo = deg2rad((float)$latitudeTo);
-  $lonTo = deg2rad((float)$longitudeTo);
-  $latDelta = $latTo - $latFrom;
-  $lonDelta = $lonTo - $lonFrom;
-  $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) +
-    cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
-  return $angle * $earthRadius; // Jarak dalam meter
+function send_json($arr) {
+    echo json_encode($arr);
+    exit();
 }
-// --- Akhir Fungsi Bantu ---
 
 // 1. Keamanan Awal: Cek Login
 if (!isset($_SESSION['user_id'])) {
-    header('Location: index.php?error=notloggedin');
-    exit();
+    send_json(['status'=>'error','message'=>'Not logged in']);
 }
 $user_id = $_SESSION['user_id'];
 
+$home_url = ($_SESSION['role'] ?? '') === 'admin' ? 'mainpageadmin.php' : 'mainpageuser.php';
+
 // 2. Proses hanya jika metode POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: absensi.php?error=invalidmethod');
-    exit();
+    send_json(['status'=>'error','message'=>'Invalid method']);
 }
 
 // 3. Ambil Data dari POST
@@ -43,25 +31,21 @@ $waktu_absen_sekarang_ts = strtotime(date('H:i:s'));
 
 // 4. Validasi Input Awal
 if ($latitude_pengguna === null || $longitude_pengguna === null || empty($tipe_absen) || !in_array($tipe_absen, ['masuk', 'keluar'])) {
-    header('Location: absensi.php?error=datakosong');
-    exit();
+    send_json(['status'=>'error','message'=>'Data tidak lengkap']);
 }
-// Validasi foto hanya jika absen 'masuk'
 if ($tipe_absen == 'masuk' && empty($foto_base64)) {
-    header('Location: absensi.php?error=datakosong');
-    exit();
+    send_json(['status'=>'error','message'=>'Foto wajib untuk absen masuk']);
 }
 
 
 try {
     // --- 5. Ambil Data SEMUA Cabang (TERMASUK JAM SHIFT) ---
-    // PERBAIKAN: Query ke tabel yang benar `cabang_outlet`
-    $sql_all_branches = "SELECT id, latitude, longitude, radius_meter, jam_masuk, jam_keluar FROM cabang_outlet";
+    // PERBAIKAN: Query ke tabel yang benar `cabang`
+    $sql_all_branches = "SELECT id, latitude, longitude, radius_meter, jam_masuk, jam_keluar FROM cabang";
     $all_branches = $pdo->query($sql_all_branches)->fetchAll();
 
     if (empty($all_branches)) {
-        header('Location: absensi.php?error=datacabangtidakada'); 
-        exit();
+        send_json(['status'=>'error','message'=>'Data cabang tidak ada']);
     }
 
     // ========================================================
@@ -76,8 +60,7 @@ try {
     }
 
     if (empty($cabang_valid_berdasarkan_lokasi)) {
-        header('Location: absensi.php?error=lokasitidaksah'); 
-        exit();
+        send_json(['status'=>'error','message'=>'Lokasi tidak sah']);
     }
     
     // ========================================================
@@ -114,11 +97,11 @@ try {
             $data_gambar_base64 = substr($foto_base64, strpos($foto_base64, ',') + 1);
             $type = strtolower($type[1]);
             if (!in_array($type, ['jpg', 'jpeg', 'png'])) {
-                 header('Location: absensi.php?error=fototipe'); exit();
+                 send_json(['status'=>'error','message'=>'Tipe foto tidak valid']);
             }
             $data_gambar_biner = base64_decode($data_gambar_base64);
             if ($data_gambar_biner === false) {
-                 header('Location: absensi.php?error=fotodecode'); exit();
+                 send_json(['status'=>'error','message'=>'Gagal decode foto']);
             }
 
             $nama_file_foto = 'absen_' . $user_id . '_' . time() . '.' . ($type == 'jpeg' ? 'jpg' : $type);
@@ -130,12 +113,10 @@ try {
             }
 
             if (!file_put_contents($path_simpan_foto, $data_gambar_biner)) {
-                header('Location: absensi.php?error=gagalsimpanfoto');
-                exit();
+                send_json(['status'=>'error','message'=>'Gagal simpan foto']);
             }
         } else {
-            header('Location: absensi.php?error=fotoformat');
-            exit();
+            send_json(['status'=>'error','message'=>'Format foto tidak valid']);
         }
     }
 
@@ -165,9 +146,8 @@ try {
         $stmt_cek->execute([$user_id, $tanggal_hari_ini]);
         
         if ($stmt_cek->fetch()) {
-             if ($nama_file_foto && file_exists('uploads/' . $nama_file_foto)) unlink('uploads/' . $nama_file_foto); 
-             header('Location: absensi.php?error=sudahmasuk');
-             exit();
+            if ($nama_file_foto && file_exists('uploads/' . $nama_file_foto)) unlink('uploads/' . $nama_file_foto); 
+            send_json(['status'=>'error','message'=>'Sudah absen masuk hari ini']);
         }
 
         // INSERT data absen masuk 
@@ -179,10 +159,7 @@ try {
             $user_id, $status_lokasi, $latitude_pengguna, $longitude_pengguna, 
             $nama_file_foto, $tanggal_hari_ini, $menit_terlambat, $status_keterlambatan
         ]);
-
-        header('Location: mainpageuser.php?status=masuk_sukses');
-        exit();
-
+        send_json(['status'=>'success','next'=>'keluar']);
     } elseif ($tipe_absen == 'keluar') {
         
         // Cek apakah sudah absen masuk hari ini DAN belum absen keluar
@@ -192,26 +169,46 @@ try {
         $data_absen_masuk = $stmt_cek_keluar->fetch();
 
         if (!$data_absen_masuk) {
-             header('Location: absensi.php?error=belummasukatausudahkeluar');
-             exit();
+            send_json(['status'=>'error','message'=>'Belum absen masuk atau sudah absen keluar']);
         }
         
         $absen_id_yang_diupdate = $data_absen_masuk['id'];
 
-        // UPDATE waktu_keluar
-        $sql_update = "UPDATE absensi SET waktu_keluar = NOW() WHERE id = ?";
-        $stmt_update = $pdo->prepare($sql_update);
-        $stmt_update->execute([$absen_id_yang_diupdate]);
+        // --- Ambil data shift user hari ini ---
+        $sql_shift = "SELECT jam_keluar FROM cabang WHERE id = ?";
+        $stmt_shift = $pdo->prepare($sql_shift);
+        $stmt_shift->execute([$shift_terpilih['id']]);
+        $shift = $stmt_shift->fetch();
+        $jam_keluar_shift = $shift ? $shift['jam_keluar'] : null;
 
-        // Arahkan ke halaman konfirmasi lembur
-        header('Location: konfirmasi_lembur.php?absen_id=' . $absen_id_yang_diupdate);
-        exit();
+        $waktu_keluar_sekarang = date('H:i:s');
+        $is_overwork = false;
+        if ($jam_keluar_shift && $waktu_keluar_sekarang > $jam_keluar_shift) {
+            $is_overwork = true;
+        }
+
+        // UPDATE waktu_keluar dan status_lembur
+        $sql_update = "UPDATE absensi SET waktu_keluar = NOW(), status_lembur = ? WHERE id = ?";
+        $status_lembur = $is_overwork ? 'Pending' : 'Not Applicable';
+        $stmt_update = $pdo->prepare($sql_update);
+        $stmt_update->execute([$status_lembur, $absen_id_yang_diupdate]);
+        send_json(['status'=>'success','next'=>'done']);
     }
 
 } catch (PDOException $e) {
-    // Tangkap semua error PDO
     error_log("Proses Absensi Gagal: " . $e->getMessage());
-    header('Location: absensi.php?error=dberror&msg=' . urlencode($e->getMessage()));
-    exit();
+    send_json(['status'=>'error','message'=>'DB error']);
+}
+
+function haversineGreatCircleDistance($latitudeFrom, $longitudeFrom, $latitudeTo, $longitudeTo, $earthRadius = 6371000) {
+    $latFrom = deg2rad($latitudeFrom);
+    $lonFrom = deg2rad($longitudeFrom);
+    $latTo = deg2rad($latitudeTo);
+    $lonTo = deg2rad($longitudeTo);
+    $latDelta = $latTo - $latFrom;
+    $lonDelta = $lonTo - $lonFrom;
+    $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) +
+        cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
+    return $angle * $earthRadius;
 }
 ?>
