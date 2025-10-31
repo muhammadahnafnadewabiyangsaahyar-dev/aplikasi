@@ -1,6 +1,9 @@
 <?php
 session_start();
-include 'connect.php';
+include 'connect.php'; // Ini memuat $pdo
+
+$error_message = "";
+$success_message = "";
 
 // Cek jika user sudah login
 if (!isset($_SESSION['user_id'])) {
@@ -36,85 +39,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_foto'])) {
                 if ($fileSize < 5000000) { 
 
                     // ========================================================
-                    // --- BLOK BARU: Ambil nama foto lama ---
+                    // --- BLOK PERBAIKAN: Gunakan PDO untuk update DB ---
                     // ========================================================
-                    $old_foto_profil = null;
-                    $sql_get_old = "SELECT foto_profil FROM register WHERE id = ?";
-                    $stmt_get = mysqli_prepare($conn, $sql_get_old);
-                    
-                    if ($stmt_get) {
-                        mysqli_stmt_bind_param($stmt_get, "i", $user_id);
-                        mysqli_stmt_execute($stmt_get);
-                        $result_get = mysqli_stmt_get_result($stmt_get);
-                        $data_user = mysqli_fetch_assoc($result_get);
-                        if ($data_user && !empty($data_user['foto_profil'])) {
-                            $old_foto_profil = $data_user['foto_profil'];
-                        }
-                        mysqli_stmt_close($stmt_get);
-                    }
-                    // --- AKHIR BLOK BARU ---
-                    
-                    // Buat nama file baru yang unik (sesuai kode asli Anda)
-                    $fileNameNew = $user_id . "_" . time() . "." . $fileActualExt;
-                    $fileDestination = 'uploads/' . $fileNameNew;
+                    try {
+                        // Ambil nama file lama untuk dihapus (opsional tapi bagus)
+                        $stmt_old = $pdo->prepare("SELECT foto_profil FROM register WHERE id = ?");
+                        $stmt_old->execute([$user_id]);
+                        $old_foto = $stmt_old->fetchColumn();
 
-                    // Pindahkan file baru ke folder uploads
-                    if (move_uploaded_file($fileTmpName, $fileDestination)) {
-                        
                         // Update database dengan nama file baru
-                        $sql_update = "UPDATE register SET foto_profil = ? WHERE id = ?";
-                        $stmt_update = mysqli_prepare($conn, $sql_update);
+                        $sql_update_foto = "UPDATE register SET foto_profil = ? WHERE id = ?";
+                        $stmt = $pdo->prepare($sql_update_foto);
                         
-                        if ($stmt_update) {
-                            mysqli_stmt_bind_param($stmt_update, "si", $fileNameNew, $user_id);
-                            mysqli_stmt_execute($stmt_update);
-                            mysqli_stmt_close($stmt_update);
-
-                            // ========================================================
-                            // --- BLOK BARU: Hapus foto lama (JIKA ADA) ---
-                            // ========================================================
-                            // Cek jika nama file lama ada DAN file-nya benar-benar ada di server
-                            if ($old_foto_profil !== null && file_exists('uploads/' . $old_foto_profil)) {
-                                // Coba hapus file lama, @ untuk menekan error jika gagal (opsional)
-                                @unlink('uploads/' . $old_foto_profil);
-                            }
-                            // --- AKHIR BLOK BARU ---
+                        if ($stmt->execute([$nama_file_baru, $user_id])) {
+                            $success_message = "Foto profil berhasil diupdate!";
                             
-                            header("Location: " . $redirect_page . "?upload=success");
-                            exit();
+                            // Hapus file lama jika ada & bukan file default
+                            if ($old_foto && $old_foto != 'default.png' && file_exists('uploads/' . $old_foto)) {
+                                @unlink('uploads/' . $old_foto);
+                            }
+                            
+                            // JS untuk merefresh gambar di halaman utama (parent)
+                            echo '<script>parent.document.getElementById("profile-pic-preview").src = "' . $tujuan_upload . '?' . time() . '";</script>';
                             
                         } else {
-                            // Gagal prepare statement update
-                            @unlink($fileDestination); // Hapus file baru yang sudah terlanjur di-upload
-                            header("Location: " . $redirect_page . "?error=dberror");
-                            exit();
+                            $error_message = "Gagal menyimpan data ke database.";
+                            @unlink($tujuan_upload); // Hapus file jika gagal update DB
                         }
-                        
-                    } else {
-                        header("Location: " . $redirect_page . "?error=movefileerror");
-                        exit();
+                    } catch (PDOException $e) {
+                        $error_message = "Database error: " . $e->getMessage();
+                        @unlink($tujuan_upload); // Hapus file jika gagal update DB
                     }
+                    // ========================================================
 
                 } else {
-                    header("Location: " . $redirect_page . "?error=filesize");
-                    exit();
+                    $error_message = "Gagal memindahkan file yang diupload.";
                 }
-            } else {
-                header("Location: ". $redirect_page . "?error=fileerror");
-                exit();
             }
-        } else {
-            header("Location: " . $redirect_page . "?error=filetype");
-            exit();
         }
-    } else {
-        header("Location: " . $redirect_page . "?error=nofile");
-        exit();
     }
-} else {
-    header("Location: " . $redirect_page . "?error=invalidrequest");
-    exit();
 }
-
-mysqli_close($conn);
 ?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: transparent; font-size: 14px; }
+        form { display: flex; align-items: center; }
+        input[type="file"] { flex-grow: 1; font-size: 12px; }
+        button { font-size: 12px; padding: 5px 8px; margin-left: 5px; }
+        p { margin: 2px 0; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <form action="upload_foto.php" method="POST" enctype="multipart/form-data">
+        <input type="file" name="foto_profil" required>
+        <button type="submit" class="btn-small">Upload</button>
+    </form>
+    <?php if ($error_message): ?>
+        <p style="color:red;"><?php echo $error_message; ?></p>
+    <?php endif; ?>
+    <?php if ($success_message): ?>
+        <p style="color:green;"><?php echo $success_message; ?></p>
+    <?php endif; ?>
+</body>
+</html>

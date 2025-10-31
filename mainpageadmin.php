@@ -7,27 +7,33 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role
     exit;
 }
 
-// Muat koneksi DB
+// Muat koneksi DB (Ini sekarang membuat variabel $pdo)
 include 'connect.php';
 
-// Ambil semua data pengguna dari tabel 'register'
-// Pilih kolom yang ingin Anda tampilkan
-$sql_users = "SELECT id, nama_lengkap, username, email, role, time_created FROM register ORDER BY time_created DESC"; 
-$result_users = mysqli_query($conn, $sql_users);
+// ========================================================
+// --- BLOK PERBAIKAN: Gunakan PDO untuk mengambil data ---
+// ========================================================
+$daftar_pengguna = []; // Inisialisasi array
 
-// Siapkan array untuk menampung data (opsional, bisa loop langsung)
-$daftar_pengguna = [];
-if ($result_users && mysqli_num_rows($result_users) > 0) {
-    while ($row = mysqli_fetch_assoc($result_users)) {
-        $daftar_pengguna[] = $row;
-    }
-} else if (!$result_users) {
+try {
+    // Ambil semua data pengguna dari tabel 'register'
+    $sql_users = "SELECT id, nama_lengkap, username, email, role, time_created FROM register ORDER BY time_created DESC"; 
+    
+    // 1. Gunakan $pdo->query() untuk eksekusi
+    $stmt = $pdo->query($sql_users);
+    
+    // 2. Ambil semua data sekaligus ke dalam array
+    $daftar_pengguna = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+} catch (PDOException $e) {
     // Handle error jika query gagal
-    echo "Error mengambil data pengguna: " . mysqli_error($conn);
+    echo "Error mengambil data pengguna: " . $e->getMessage();
 }
+// =Note: $daftar_pengguna sekarang sudah berisi data, siap untuk di-loop di HTML
+// ========================================================
 
-// Jangan lupa tutup koneksi jika sudah tidak dipakai lagi di halaman ini
-// mysqli_close($conn); // Tutup di akhir halaman jika masih perlu DB
+// Variabel $home_url (sebelumnya tidak terdefinisi, ditambahkan)
+$home_url = ($_SESSION['role'] == 'admin') ? 'mainpageadmin.php' : 'mainpageuser.php';
 
 ?>
 
@@ -38,7 +44,7 @@ if ($result_users && mysqli_num_rows($result_users) > 0) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
-    <title>Document</title>
+    <title>Admin Dashboard - Teman KAORI</title>
 </head>
 <body>
     <div class="headercontainer">
@@ -61,6 +67,39 @@ if ($result_users && mysqli_num_rows($result_users) > 0) {
     </div>
     <div class="content-container">
         <p class="content-text">Ini adalah halaman utama untuk admin KAORI Indonesia. Gunakan navigasi di atas untuk mengakses fitur-fitur yang tersedia.</p>
+        
+        <h2 style="margin-top: 30px;">Daftar Pengguna Terdaftar</h2>
+        <div style="overflow-x: auto;">
+            <table class="rekap-table"> <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nama Lengkap</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Tanggal Daftar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($daftar_pengguna)): ?>
+                        <tr>
+                            <td colspan="6" style="text-align: center;">Belum ada pengguna yang terdaftar.</td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($daftar_pengguna as $pengguna): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($pengguna['id']); ?></td>
+                                <td><?php echo htmlspecialchars($pengguna['nama_lengkap']); ?></td>
+                                <td><?php echo htmlspecialchars($pengguna['username']); ?></td>
+                                <td><?php echo htmlspecialchars($pengguna['email']); ?></td>
+                                <td><?php echo htmlspecialchars($pengguna['role']); ?></td>
+                                <td><?php echo htmlspecialchars(date('d-m-Y', strtotime($pengguna['time_created']))); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
 <footer>
     <div class="footer-container">

@@ -1,203 +1,178 @@
-document.addEventListener("DOMContentLoaded", function() {
-    // --- Referensi Elemen DOM ---
-    const video = document.getElementById('camera-stream');
-    const canvas = document.getElementById('photo-canvas');
-    const captureBtn = document.getElementById('capture-btn');
-    const locationInfo = document.getElementById('location-info');
-    const form = document.getElementById('absensi-form');
-    const latInput = document.getElementById('latitude');
-    const lonInput = document.getElementById('longitude');
-    const photoInput = document.getElementById('foto_absensi_base64');
-    const btnMasuk = document.getElementById('btn-absen-masuk');
-    const btnKeluar = document.getElementById('btn-absen-keluar');
-    const errorMessage = document.getElementById('error-message');
+// Menunggu seluruh halaman dimuat sebelum menjalankan skrip
+document.addEventListener("DOMContentLoaded", () => {
 
-    // --- Variabel Status ---
-    let stream = null; // Untuk menyimpan stream kamera
-    let locationReady = false;
-    let photoTaken = false;
+    // --- Ambil Elemen-elemen Penting ---
+    const video = document.getElementById('kamera-preview');
+    const canvas = document.getElementById('kamera-canvas');
+    const btnAbsen = document.getElementById('btn-absen');
+    const statusLokasi = document.getElementById('status-lokasi');
     
-    // ========================================================
-    // --- FUNGSI UTAMA ---
-    // ========================================================
+    // Ambil form tersembunyi
+    const formAbsensi = document.getElementById('form-absensi');
+    const inputLat = document.getElementById('input-latitude');
+    const inputLon = document.getElementById('input-longitude');
+    const inputTipe = document.getElementById('input-tipe-absen');
+    const inputFoto = document.getElementById('input-foto-base64');
 
-    /**
-     * Mengaktifkan/menonaktifkan tombol submit berdasarkan status
-     */
-    function updateButtonState() {
-        if (locationReady && photoTaken) {
-            btnMasuk.disabled = false;
-            btnKeluar.disabled = false;
-            errorMessage.textContent = "Siap untuk absen.";
-            errorMessage.style.color = 'green';
-        } else {
-            btnMasuk.disabled = true;
-            btnKeluar.disabled = true;
-            if (!locationReady) {
-                errorMessage.textContent = "Sedang menunggu lokasi...";
-            } else if (!photoTaken) {
-                errorMessage.textContent = "Harap ambil foto terlebih dahulu.";
-            }
-            errorMessage.style.color = 'red';
-        }
-    }
+    let koordinatPengguna = null;
+    let streamKamera = null;
+    let tipeAbsenSaatIni = 'masuk'; // Default
 
-    /**
-     * (PERBAIKAN) Menghentikan stream kamera yang sedang aktif
-     */
-    function stopCamera() {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            stream = null;
-        }
-    }
-
-    /**
-     * (PERBAIKAN) Memulai stream kamera
-     */
+    // --- Fungsi Utama 1: Memulai Kamera ---
     async function startCamera() {
-        // Hentikan dulu jika ada stream lama
-        stopCamera(); 
-        
+        // Cek apakah tombol absen ada (jika sudah absen keluar, tombol tidak ada)
+        if (!btnAbsen) {
+            statusLokasi.textContent = "Absensi hari ini sudah selesai.";
+            return;
+        }
+
+        // Hanya jalankan jika belum ada stream
+        if (streamKamera) return; 
+
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    facingMode: 'user', // Kamera depan
-                    width: { ideal: 640 },
-                    height: { ideal: 480 }
-                } 
+            statusLokasi.textContent = "Meminta izin kamera...";
+            // Minta izin kamera (dan audio, meskipun tidak dipakai)
+            streamKamera = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: 'user' // Prioritaskan kamera depan
+                },
+                audio: false
             });
-            video.srcObject = stream;
-            video.style.display = 'block'; // Tampilkan video
-            canvas.style.display = 'none'; // Sembunyikan canvas
-            captureBtn.textContent = 'Ambil Foto';
-            captureBtn.style.display = 'block';
-            photoTaken = false;
-            updateButtonState();
+            
+            video.srcObject = streamKamera;
+            video.play();
+            statusLokasi.textContent = "Kamera aktif. " + statusLokasi.textContent;
+            
         } catch (err) {
-            console.error("Error accessing camera: ", err);
-            errorMessage.textContent = "Gagal mengakses kamera. Pastikan Anda mengizinkan akses kamera di browser Anda. " + err.message;
-            video.style.display = 'none';
-            captureBtn.style.display = 'none';
+            console.error("Error Kamera:", err);
+            statusLokasi.textContent = "Error: Kamera tidak diizinkan atau tidak ditemukan.";
+            btnAbsen.disabled = true;
+            btnAbsen.textContent = "Kamera Diblokir";
         }
     }
 
-    /**
-     * (PERBAIKAN) Mengambil foto dari video
-     */
-    function takePhoto() {
-        // Set ukuran canvas sesuai video
+    // --- Fungsi Utama 2: Mendapatkan Lokasi ---
+    function setupLokasi() {
+        // Cek apakah tombol absen ada
+        if (!btnAbsen) return; 
+
+        if ('geolocation' in navigator) {
+            statusLokasi.textContent = "Mendeteksi lokasi Anda...";
+            navigator.geolocation.getCurrentPosition(
+                (posisi) => {
+                    // Sukses dapat lokasi
+                    koordinatPengguna = {
+                        latitude: posisi.coords.latitude,
+                        longitude: posisi.coords.longitude
+                    };
+                    statusLokasi.textContent = "Lokasi ditemukan.";
+                    
+                    // Aktifkan tombol jika lokasi sudah siap
+                    btnAbsen.disabled = false;
+                    console.log("Lokasi:", koordinatPengguna);
+                },
+                (err) => {
+                    // Gagal dapat lokasi
+                    console.error("Error Lokasi:", err);
+                    statusLokasi.textContent = "Error: Lokasi tidak diizinkan atau gagal dideteksi.";
+                    btnAbsen.disabled = true;
+                    btnAbsen.textContent = "Lokasi Diblokir";
+                },
+                {
+                    enableHighAccuracy: true, // Minta akurasi tinggi
+                    timeout: 10000,           // Batas waktu 10 detik
+                    maximumAge: 0             // Jangan pakai cache
+                }
+            );
+        } else {
+            statusLokasi.textContent = "Error: Geolocation tidak didukung di browser ini.";
+            btnAbsen.disabled = true;
+        }
+    }
+
+    // --- Fungsi Utama 3: Mengambil Foto (Capture) ---
+    function ambilFoto() {
+        // Set ukuran canvas sesuai ukuran video
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         
-        // Gambar frame video ke canvas
+        // "Gambar" frame video saat ini ke canvas
         const context = canvas.getContext('2d');
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        // Konversi canvas ke Base64 JPEG
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.9); // Kompresi 90%
-        photoInput.value = dataUrl;
-        
-        // Tampilkan foto
-        video.style.display = 'none';
-        canvas.style.display = 'block';
-        
-        // HENTIKAN KAMERA (Bug UX Fix)
-        stopCamera(); 
-        
-        captureBtn.textContent = 'Ambil Ulang';
-        photoTaken = true;
-        updateButtonState();
+        // Konversi gambar di canvas ke format data URL (Base64)
+        // Gunakan 'image/jpeg' untuk ukuran file yang lebih kecil
+        return canvas.toDataURL('image/jpeg', 0.8); // Kualitas 80%
     }
 
-    /**
-     * (Kode Asli) Mendapatkan lokasi GPS
-     */
-    function getLocation() {
-        locationInfo.textContent = "Mendeteksi lokasi...";
-        locationInfo.style.color = 'orange';
-
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function(position) {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                
-                latInput.value = lat;
-                lonInput.value = lon;
-                locationInfo.textContent = `Lokasi terdeteksi (Akurasi: ${position.coords.accuracy.toFixed(0)} meter)`;
-                locationInfo.style.color = 'green';
-                
-                locationReady = true;
-                updateButtonState();
-                
-            }, function(err) {
-                // Error handling untuk GPS (Kode asli Anda sudah bagus)
-                let errorMsg = "Gagal mendapatkan lokasi. ";
-                switch(err.code) {
-                    case err.PERMISSION_DENIED:
-                        errorMsg += "Anda menolak izin akses lokasi.";
-                        break;
-                    case err.POSITION_UNAVAILABLE:
-                        errorMsg += "Informasi lokasi tidak tersedia.";
-                        break;
-                    case err.TIMEOUT:
-                        errorMsg += "Waktu permintaan lokasi habis (timeout).";
-                        break;
-                    default:
-                        errorMsg += "Terjadi error tidak diketahui.";
-                }
-                locationInfo.textContent = errorMsg;
-                locationInfo.style.color = 'red';
-                errorMessage.textContent = errorMsg; 
-                locationReady = false;
-                updateButtonState();
-            }, { 
-                enableHighAccuracy: true, 
-                timeout: 15000, // Waktu tunggu 15 detik
-                maximumAge: 0 
-            });
-        } else {
-            errorMessage.textContent = "Geolocation tidak didukung oleh browser ini.";
-            locationInfo.textContent = "Browser tidak mendukung Geolocation.";
-            locationInfo.style.color = 'red';
+    // --- Fungsi Utama 4: Menghentikan Kamera ---
+    function stopCamera() {
+        if (streamKamera) {
+            streamKamera.getTracks().forEach(track => track.stop());
+            streamKamera = null;
         }
     }
-    
-    // ========================================================
-    // --- EVENT LISTENERS ---
-    // ========================================================
 
-    /**
-     * (PERBAIKAN) Logika Tombol Capture
-     */
-    captureBtn.addEventListener('click', function() {
-        // Logika dipisah. Cek status tombol saat ini.
-        if (photoTaken) {
-            // Jika status "Ambil Ulang", maka mulai ulang kamera
+    // --- Menjalankan Fungsi ---
+
+    // 1. Cek dulu apakah tombol absen ada di halaman
+    if (btnAbsen) {
+        // Tombol ada, berarti belum absen keluar
+
+        // 2. Nonaktifkan tombol saat halaman dimuat
+        btnAbsen.disabled = true;
+        
+        // 3. Ambil tipe absen dari tombol
+        tipeAbsenSaatIni = btnAbsen.getAttribute('data-tipe');
+        
+        // 4. Jalankan deteksi lokasi
+        setupLokasi();
+
+        // 5. Jika absen masuk, jalankan kamera. Jika absen keluar, kamera tidak perlu.
+        if (tipeAbsenSaatIni === 'masuk') {
             startCamera();
         } else {
-            // Jika status "Ambil Foto", maka ambil foto
-            takePhoto();
+            // Untuk absen keluar, lokasi saja sudah cukup
+            statusLokasi.textContent = "Mendeteksi lokasi Anda untuk absen keluar...";
+            // (Kita tetap biarkan tombol disabled sampai lokasi didapat)
         }
-    });
-            
-    /**
-     * (Kode Asli) Logika Submit Form
-     */
-    form.addEventListener('submit', function(e) {
-        // Dobel cek sebelum submit
-        if (!locationReady || !photoTaken) {
-            e.preventDefault(); // Hentikan submit
-            updateButtonState(); // Tampilkan pesan error yang relevan
-        }
-        // Hentikan stream (jika masih nyala) saat submit
-        stopCamera();
-    });
 
-    // ========================================================
-    // --- MULAI APLIKASI ---
-    // ========================================================
-    startCamera();
-    getLocation();
-    updateButtonState(); // Set status awal (disabled)
+        // 6. Tambahkan Event Listener ke Tombol
+        btnAbsen.addEventListener('click', () => {
+            
+            // Pastikan lokasi sudah ada
+            if (!koordinatPengguna) {
+                alert("Lokasi belum siap. Mohon tunggu atau izinkan lokasi.");
+                return;
+            }
+            
+            // Tampilkan loading
+            btnAbsen.disabled = true;
+            btnAbsen.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Memproses...';
+            
+            let fotoBase64 = null;
+            
+            // Ambil foto HANYA jika absen masuk
+            if (tipeAbsenSaatIni === 'masuk') {
+                fotoBase64 = ambilFoto();
+                stopCamera(); // Matikan kamera setelah foto diambil
+            }
+
+            // Isi form tersembunyi
+            inputLat.value = koordinatPengguna.latitude;
+            inputLon.value = koordinatPengguna.longitude;
+            inputTipe.value = tipeAbsenSaatIni;
+            inputFoto.value = fotoBase64; // Akan kosong (null) jika absen keluar, dan itu tidak apa-apa
+            
+            // Kirim form
+            formAbsensi.submit();
+        });
+        
+    } else {
+        // Tombol tidak ada, berarti sudah absen keluar
+        statusLokasi.textContent = "Absensi hari ini sudah selesai.";
+    }
+
+    // Membersihkan stream kamera jika pengguna meninggalkan halaman
+    window.addEventListener('beforeunload', stopCamera);
 });

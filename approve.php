@@ -1,6 +1,7 @@
 <?php
 session_start();
-include 'connect.php';
+// Muat koneksi DB (Ini sekarang membuat variabel $pdo)
+include 'connect.php'; 
 
 // Keamanan: Pastikan hanya admin yang bisa akses
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
@@ -8,18 +9,30 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
     exit;
 }
 
-// Ambil data izin yang masih 'Pending'
-$sql_select = "SELECT p.id, r.nama_lengkap, p.perihal, p.tanggal_mulai, p.tanggal_selesai, p.lama_izin, p.alasan, p.file_surat, p.tanda_tangan_file 
-               FROM pengajuan_izin p
-               JOIN register r ON p.user_id = r.id
-               WHERE p.status = 'Pending'
-               ORDER BY p.tanggal_pengajuan ASC";
+// ========================================================
+// --- BLOK PERBAIKAN: Gunakan PDO untuk mengambil data ---
+// ========================================================
+$daftar_izin = []; // Inisialisasi array
 
-$result_select = mysqli_query($conn, $sql_select);
+try {
+    // Ambil data izin yang masih 'Pending'
+    $sql_select = "SELECT p.id, r.nama_lengkap, p.perihal, p.tanggal_mulai, p.tanggal_selesai, p.lama_izin, p.alasan, p.file_surat, p.tanda_tangan_file 
+                   FROM pengajuan_izin p
+                   JOIN register r ON p.user_id = r.id
+                   WHERE p.status = 'Pending'
+                   ORDER BY p.tanggal_pengajuan ASC";
 
-if (!$result_select) {
-    die("Error mengambil data: " . mysqli_error($conn));
+    // 1. Gunakan $pdo->query() untuk eksekusi
+    $stmt = $pdo->query($sql_select);
+
+    // 2. Ambil semua data sekaligus ke dalam array
+    $daftar_izin = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+} catch (PDOException $e) {
+    // Tangani error jika query gagal
+    die("Error mengambil data: " . $e->getMessage());
 }
+// ========================================================
 
 $home_url = 'mainpageadmin.php'; // Admin pasti ke mainpageadmin
 ?>
@@ -38,7 +51,12 @@ $home_url = 'mainpageadmin.php'; // Admin pasti ke mainpageadmin
         <div class="nav-links">
             <a href="<?php echo $home_url; ?>" class="home">Home</a>
             <a href="approve.php" class="surat">Surat Izin</a>
-            <a href="approve_lembur.php" class="lembur">Approve Lembur</a>
+            <a href="profileadmin.php" class="profile">Profile</a>
+            <a href="absen.php" class="absensi">Absensi</a>
+            <a href="view_user.php" class="viewusers">Daftar Pengguna</a>
+            <a href="view_absensi.php" class="viewabsensi">Daftar Absensi</a>
+            <a href="rekapabsen.php" class="rekapabsen">Rekap Absensi</a>
+            <a href="slipgaji.php" class="slipgaji">Slip Gaji</a>
             <a href="logout.php" class="logout">Logout</a>
         </div>
     </div>
@@ -66,8 +84,12 @@ $home_url = 'mainpageadmin.php'; // Admin pasti ke mainpageadmin
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (mysqli_num_rows($result_select) > 0): ?>
-                        <?php while ($data = mysqli_fetch_assoc($result_select)): ?>
+                    <?php if (empty($daftar_izin)): ?>
+                        <tr>
+                            <td colspan="8" style="text-align: center;">Tidak ada pengajuan surat izin yang menunggu persetujuan.</td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($daftar_izin as $data): ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($data['nama_lengkap']); ?></td>
                                 <td><?php echo htmlspecialchars($data['perihal']); ?></td>
@@ -99,14 +121,10 @@ $home_url = 'mainpageadmin.php'; // Admin pasti ke mainpageadmin
                                         <button type="submit" class="btn-reject">Tolak</button>
                                     </form>
                                 </td>
-                                </tr>
-                        <?php endwhile; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="8" style="text-align: center;">Tidak ada pengajuan surat izin yang menunggu persetujuan.</td>
-                        </tr>
+                            </tr>
+                        <?php endforeach; ?>
                     <?php endif; ?>
-                </tbody>
+                    </tbody>
             </table>
         </div>
     </div>
@@ -119,5 +137,5 @@ $home_url = 'mainpageadmin.php'; // Admin pasti ke mainpageadmin
 </footer>
 </html>
 <?php
-mysqli_close($conn);
+// 4. Hapus mysqli_close($conn); karena PDO tidak membutuhkannya
 ?>
