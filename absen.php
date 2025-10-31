@@ -90,4 +90,3 @@ include 'connect.php';
 </body>
 <script src="script_absen.js" defer></script>
 </html>
-<?php mysqli_close($conn); ?>
