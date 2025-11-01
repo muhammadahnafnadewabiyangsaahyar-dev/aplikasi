@@ -121,11 +121,13 @@ CREATE TABLE `komponen_gaji` (
 --
 
 CREATE TABLE `pegawai_whitelist` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `nama_lengkap` varchar(255) NOT NULL,
   `posisi` varchar(100) DEFAULT NULL,
   `status_registrasi` enum('pending','terdaftar') NOT NULL DEFAULT 'pending',
-  `tanggal_ditambahkan` timestamp NOT NULL DEFAULT current_timestamp()
+  `tanggal_ditambahkan` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `nama_lengkap` (`nama_lengkap`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------

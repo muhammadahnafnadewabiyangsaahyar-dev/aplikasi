@@ -72,13 +72,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
                 $pdo->beginTransaction();
 
                 // 1. INSERT ke tabel 'register'
-                $sql_insert = "INSERT INTO register (nama_lengkap, posisi, outlet, no_whatsapp, email, username, password, role) 
+                $sql_insert = "INSERT INTO register (nama_lengkap, posisi, outlet, no_whatsapp, email, password, username, role) 
                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
                 $stmt_insert = $pdo->prepare($sql_insert);
                 $stmt_insert->execute([
                     $form_data['nama_panjang'], $form_data['posisi'], $form_data['outlet'], 
-                    $form_data['no_wa'], $form_data['email'], $form_data['username'], 
-                    $hashed_password, $role
+                    $form_data['no_wa'], $form_data['email'], $hashed_password, $form_data['username'], $role
                 ]);
 
                 // 2. UPDATE tabel 'pegawai_whitelist'
@@ -151,22 +150,11 @@ try {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <title>Login & Register</title>
-    <style>
-        /* (CSS Anda dari file asli tetap di sini) */
-        /* ... */
-        .input-group select { width: 100%; padding: 15px; background: transparent; border: none; outline: none; border-radius: 5px; color: #333; font-size: 1em; position: relative; z-index: 2; -webkit-appearance: none; -moz-appearance: none; appearance: none; }
-        .input-group select option { background: #fff; color: #333; }
-        .input-group select:valid + label, .input-group select:focus + label { top: 2px; left: 15px; font-size: 0.75em; color: #555; z-index: 3; }
-        .input-group input.input-error, .input-group select.input-error { border: 1px solid #dc3545 !important; box-shadow: 0 0 5px rgba(220, 53, 69, 0.5) !important; }
-        .error-message { color: #dc3545; font-size: 0.85em; margin-top: -10px; margin-bottom: 10px; padding-left: 5px; text-align: left; }
-        .general-error { color: red; background-color: #ffebee; padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 15px; }
-    </style>
 </head>
 <body>
     <div class="headercontainer">
     <img class="logo" src="logo.png" alt="Logo">
     </div>
-    
     <div class="container" id="signup">
         <h1 class="form-title">Daftar</h1>
         
@@ -181,7 +169,6 @@ try {
                     Pendaftaran berhasil! Silakan login.
                 </p>
             <?php endif; ?>
-            
             <div class="input-group">
                 <i class="fa fa-user"></i>
                 <input type="text" name="nama_panjang" placeholder="Nama Lengkap" autocomplete="off" required 
@@ -288,9 +275,6 @@ try {
         </form>
         <p class="or">-----Atau-----</p>
         <div class="icon">
-            <i class="fa fa-brands fa-google"></i>
-            <i class="fa fa-brands fa-facebook-f"></i>
-            <i class="fa fa-brands fa-twitter"></i>
         </div>
         <div class="links">
             <p>Sudah Punya Akun?</p>
