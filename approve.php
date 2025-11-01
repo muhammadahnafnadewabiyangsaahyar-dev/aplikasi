@@ -9,6 +9,25 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
     exit;
 }
 
+// Hanya posisi tertentu yang boleh approve
+$allowed_positions = ['HR', 'Finance', 'Owner', 'superadmin'];
+if (!isset($_SESSION['posisi'])) {
+    if (isset($_SESSION['user_id'])) {
+        $stmt_pos = $pdo->prepare("SELECT posisi FROM register WHERE id = ?");
+        $stmt_pos->execute([$_SESSION['user_id']]);
+        $row_pos = $stmt_pos->fetch(PDO::FETCH_ASSOC);
+        if ($row_pos && !empty($row_pos['posisi'])) {
+            $_SESSION['posisi'] = $row_pos['posisi'];
+        }
+    }
+}
+$user_posisi = isset($_SESSION['posisi']) ? strtolower(trim($_SESSION['posisi'])) : '';
+$allowed_positions_normalized = array_map(function($p) { return strtolower(trim($p)); }, $allowed_positions);
+if (!in_array($user_posisi, $allowed_positions_normalized)) {
+    header('Location: index.php?error=unauthorized');
+    exit;
+}
+
 // ========================================================
 // --- BLOK PERBAIKAN: Gunakan PDO untuk mengambil data ---
 // ========================================================
@@ -84,13 +103,13 @@ $home_url = 'mainpageadmin.php'; // Admin pasti ke mainpageadmin
                                 <td><?php echo htmlspecialchars($data['lama_izin']); ?></td>
                                 <td style="max-width: 200px; white-space: pre-wrap;"><?php echo htmlspecialchars($data['alasan']); ?></td>
                                 <td>
-                                    <a href="surat_izin/<?php echo htmlspecialchars($data['file_surat']); ?>" class="link-surat" download>
+                                    <a href="uploads/surat_izin/<?php echo htmlspecialchars($data['file_surat']); ?>" class="link-surat" download>
                                         Download Surat
                                     </a>
                                 </td>
                                 <td>
                                     <?php if (!empty($data['tanda_tangan_file'])): ?>
-                                        <img src="uploads/<?php echo htmlspecialchars($data['tanda_tangan_file']); ?>" alt="TTD" style="max-width: 100px; border: 1px solid #ccc;">
+                                        <img src="uploads/tanda_tangan/<?php echo htmlspecialchars($data['tanda_tangan_file']); ?>" alt="TTD" style="max-width: 100px; border: 1px solid #ccc;">
                                     <?php else: ?>
                                         (Tidak ada TTD)
                                     <?php endif; ?>
@@ -98,13 +117,13 @@ $home_url = 'mainpageadmin.php'; // Admin pasti ke mainpageadmin
                                 
                                 <td class="action-buttons">
                                     <form action="proses_approve.php" method="POST" style="display: block;">
-                                        <input type="hidden" name="izin_id" value="<?php echo $data['id']; ?>">
-                                        <input type="hidden" name="status" value="Diterima">
+                                        <input type="hidden" name="pengajuan_id" value="<?php echo $data['id']; ?>">
+                                        <input type="hidden" name="action" value="approve">
                                         <button type="submit" class="btn-approve">Setujui</button>
                                     </form>
                                     <form action="proses_approve.php" method="POST" style="display: block; margin-top: 5px;">
-                                        <input type="hidden" name="izin_id" value="<?php echo $data['id']; ?>">
-                                        <input type="hidden" name="status" value="Ditolak">
+                                        <input type="hidden" name="pengajuan_id" value="<?php echo $data['id']; ?>">
+                                        <input type="hidden" name="action" value="reject">
                                         <button type="submit" class="btn-reject">Tolak</button>
                                     </form>
                                 </td>

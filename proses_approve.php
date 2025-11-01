@@ -31,15 +31,14 @@ $wa_message_base = ''; // Pesan dasar untuk WA
 // --- Tentukan Status Baru & Pesan Notifikasi ---
 // !!! PENTING: Sesuaikan 'Approved'/'Rejected' dengan 'Disetujui'/'Ditolak' jika Anda menggunakan itu di query Riwayat !!!
 if ($action == 'approve') {
-    $new_status = 'Approved'; 
+    $new_status = 'Diterima'; 
     $email_subject = "Pengajuan Izin Anda Disetujui (ID: #{$pengajuan_id})";
     $email_body_base = "Pengajuan izin Anda dengan ID #{$pengajuan_id} telah disetujui oleh admin.";
     $wa_message_base = "Info KAORI: Pengajuan izin Anda ID #{$pengajuan_id} telah disetujui.";
 } elseif ($action == 'reject') {
-    $new_status = 'Rejected';
+    $new_status = 'Ditolak';
     $email_subject = "Pengajuan Izin Anda Ditolak (ID: #{$pengajuan_id})";
     $email_body_base = "Mohon maaf, pengajuan izin Anda dengan ID #{$pengajuan_id} ditolak.";
-    // Anda bisa tambahkan input alasan penolakan jika mau
     $wa_message_base = "Info KAORI: Mohon maaf, pengajuan izin Anda ID #{$pengajuan_id} ditolak.";
 } else {
     echo json_encode(['success' => false, 'message' => 'Aksi tidak dikenal.']);

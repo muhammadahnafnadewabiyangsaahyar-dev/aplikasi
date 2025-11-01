@@ -30,8 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
     if (empty($form_data['outlet'])) $errors['outlet'] = 'Outlet harus dipilih.';
     if (empty($form_data['no_wa'])) {
         $errors['no_wa'] = 'No. WhatsApp harus diisi.';
-    } elseif (!preg_match('/^\+62[0-9]{10,12}$/', $form_data['no_wa'])) {
-        $errors['no_wa'] = 'Format salah (Contoh: +6281234567890).';
+    } elseif (!preg_match('/^\+62\s[0-9]{8,12}$/', $form_data['no_wa'])) {
+        $errors['no_wa'] = 'Format salah (Contoh: +62 81234567890).';
     }
     if (empty($form_data['email'])) {
         $errors['email'] = 'Email harus diisi.';
@@ -66,30 +66,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
             if (empty($errors)) {
                 // Hash password
                 $hashed_password = password_hash($form_data['password'], PASSWORD_DEFAULT);
-                $role = "user";
+                $role = isset($pegawai_data['role']) ? trim($pegawai_data['role']) : '';
+                if ($role === '' || $role === null) {
+                    $errors['nama_panjang'] = 'Error! Role untuk user ini tidak ditemukan di whitelist. Hubungi admin.';
+                } else {
+                    // Mulai Transaksi
+                    $pdo->beginTransaction();
 
-                // Mulai Transaksi
-                $pdo->beginTransaction();
+                    // 1. INSERT ke tabel 'register'
+                    $sql_insert = "INSERT INTO register (nama_lengkap, posisi, outlet, no_whatsapp, email, password, username, role) 
+                                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                    $stmt_insert = $pdo->prepare($sql_insert);
+                    $stmt_insert->execute([
+                        $form_data['nama_panjang'], $form_data['posisi'], $form_data['outlet'], 
+                        $form_data['no_wa'], $form_data['email'], $hashed_password, $form_data['username'], $role
+                    ]);
 
-                // 1. INSERT ke tabel 'register'
-                $sql_insert = "INSERT INTO register (nama_lengkap, posisi, outlet, no_whatsapp, email, password, username, role) 
-                               VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-                $stmt_insert = $pdo->prepare($sql_insert);
-                $stmt_insert->execute([
-                    $form_data['nama_panjang'], $form_data['posisi'], $form_data['outlet'], 
-                    $form_data['no_wa'], $form_data['email'], $hashed_password, $form_data['username'], $role
-                ]);
+                    // 2. UPDATE tabel 'pegawai_whitelist'
+                    $sql_update_wl = "UPDATE pegawai_whitelist SET status_registrasi = 'terdaftar' WHERE nama_lengkap = ?";
+                    $stmt_update_wl = $pdo->prepare($sql_update_wl);
+                    $stmt_update_wl->execute([$form_data['nama_panjang']]);
 
-                // 2. UPDATE tabel 'pegawai_whitelist'
-                $sql_update_wl = "UPDATE pegawai_whitelist SET status_registrasi = 'terdaftar' WHERE nama_lengkap = ?";
-                $stmt_update_wl = $pdo->prepare($sql_update_wl);
-                $stmt_update_wl->execute([$form_data['nama_panjang']]);
-
-                // SUKSES: Commit transaksi
-                $pdo->commit();
-                header("Location: index.php?status=register_success");
-                exit();
-                
+                    // SUKSES: Commit transaksi
+                    $pdo->commit();
+                    header("Location: index.php?status=register_success");
+                    exit();
+                }
             } // akhir 'if empty(errors)' setelah cek whitelist
 
         } catch (PDOException $e) {
@@ -155,53 +157,44 @@ try {
     <div class="headercontainer">
     <img class="logo" src="logo.png" alt="Logo">
     </div>
-    <div class="container" id="signup">
-        <h1 class="form-title">Daftar</h1>
-        
-        <form method="POST" action="index.php" autocomplete="off">
-            
-            <?php if (isset($errors['general'])): ?>
-                <p class="general-error"><?php echo htmlspecialchars($errors['general']); ?></p>
-            <?php endif; ?>
 
-            <?php if (isset($_GET['status']) && $_GET['status'] == 'register_success'): ?>
-                <p style="color: green; background-color: #e8f5e9; padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 15px;">
-                    Pendaftaran berhasil! Silakan login.
-                </p>
-            <?php endif; ?>
+    <!-- Modal/Jendela Check Whitelist -->
+    <div class="container" id="check-whitelist" style="display: none;">
+        <h1 class="form-title">Cek Nama di Whitelist</h1>
+        <form id="whitelistForm" autocomplete="off">
             <div class="input-group">
                 <i class="fa fa-user"></i>
-                <input type="text" name="nama_panjang" placeholder="Nama Lengkap" autocomplete="off" required 
-                       value="<?php echo htmlspecialchars($form_data['nama_panjang'] ?? ''); ?>"
-                       class="<?php echo isset($errors['nama_panjang']) ? 'input-error' : ''; ?>">
-                <label for="nama_panjang">Nama Lengkap</label>
+                <input type="text" name="whitelist_nama" id="whitelist_nama" placeholder="Masukkan Nama Lengkap" required>
+                <label for="whitelist_nama">Nama Lengkap</label>
             </div>
-            <?php if (isset($errors['nama_panjang'])): ?>
-                <p class="error-message"><?php echo $errors['nama_panjang']; ?></p>
-            <?php endif; ?>
+            <button type="submit" class="btn">Cek Whitelist</button>
+        </form>
+        <div id="whitelist-result" style="margin-top: 15px;"></div>
+        <button id="lanjutDaftarBtn" class="btn" style="display:none; margin-top:10px;">Lanjut Daftar</button>
+        <div class="links">
+            <button id="backToLoginBtn">Kembali ke Login</button>
+        </div>
+    </div>
 
+    <!-- Form Registrasi (hanya muncul setelah whitelist valid) -->
+    <div class="container" id="signup" style="display:none;">
+        <h1 class="form-title">Daftar</h1>
+        <form method="POST" action="index.php" autocomplete="off" id="signupForm">
+            <!-- Nama & Posisi readonly -->
+            <div class="input-group">
+                <i class="fa fa-user"></i>
+                <input type="text" name="nama_panjang" id="signup_nama" placeholder="Nama Lengkap" readonly required value="<?php echo htmlspecialchars($form_data['nama_panjang'] ?? ''); ?>">
+                <label for="signup_nama">Nama Lengkap</label>
+            </div>
             <div class="input-group">
                 <i class="fa fa-briefcase"></i>
-                <select name="posisi" id="posisi" required 
-                        class="<?php echo isset($errors['posisi']) ? 'input-error' : ''; ?>">
-                    <option value="" <?php echo empty($form_data['posisi']) ? 'selected' : ''; ?>>-- Pilih Posisi --</option>
-                    <?php foreach ($daftar_posisi as $posisi): ?>
-                        <option value="<?php echo htmlspecialchars($posisi); ?>" 
-                                <?php echo (isset($form_data['posisi']) && $form_data['posisi'] == $posisi) ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($posisi); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <label for="posisi">Jabatan</label>
+                <input type="text" name="posisi" id="signup_posisi" placeholder="Posisi" readonly required value="<?php echo htmlspecialchars($form_data['posisi'] ?? ''); ?>">
+                <label for="signup_posisi">Jabatan</label>
             </div>
-            <?php if (isset($errors['posisi'])): ?>
-                <p class="error-message"><?php echo $errors['posisi']; ?></p>
-            <?php endif; ?>
-            
+            <!-- Field lain seperti biasa -->
             <div class="input-group">
                 <i class="fa fa-location-dot"></i>
-                <select name="outlet" id="outlet" required
-                        class="<?php echo isset($errors['outlet']) ? 'input-error' : ''; ?>">
+                <select name="outlet" id="outlet" required class="<?php echo isset($errors['outlet']) ? 'input-error' : ''; ?>">
                     <option value="" <?php echo empty($form_data['outlet']) ? 'selected' : ''; ?>>-- Pilih Outlet --</option>
                     <?php foreach ($daftar_cabang as $cabang): ?>
                         <option value="<?php echo htmlspecialchars($cabang); ?>"
@@ -212,23 +205,15 @@ try {
                 </select>
                 <label for="outlet">Outlet</label>
             </div>
-            <?php if (isset($errors['outlet'])): ?>
-                <p class="error-message"><?php echo $errors['outlet']; ?></p>
-            <?php endif; ?>
-
             <div class="input-group">
                 <i class="fa fa-brands fa-whatsapp"></i>
-                <input type="tel" name="no_wa" placeholder="No WhatsApp" autocomplete="off" required 
-                       pattern="\+62[0-9]{10,12}" 
-                       title="Format: +62 diikuti 10-12 digit angka (Contoh: +6281234567890)"
-                       value="<?php echo htmlspecialchars($form_data['no_wa'] ?? ''); ?>"
+                <input type="tel" name="no_wa" id="no_wa" placeholder="+62 8123xxxxxxx" autocomplete="off" required 
+                       pattern="\+62\s[0-9]{8,12}" 
+                       title="Format: +62 diikuti spasi dan 8-12 digit angka (Contoh: +62 81234567890)"
+                       value="<?php echo isset($form_data['no_wa']) ? htmlspecialchars($form_data['no_wa']) : '+62 '; ?>"
                        class="<?php echo isset($errors['no_wa']) ? 'input-error' : ''; ?>">
                 <label for="no_wa">No WhatsApp</label>
             </div>
-            <?php if (isset($errors['no_wa'])): ?>
-                <p class="error-message"><?php echo $errors['no_wa']; ?></p>
-            <?php endif; ?>
-
             <div class="input-group">
                 <i class="fa fa-envelope"></i>
                 <input type="email" name="email" placeholder="Email" autocomplete="off" required
@@ -236,10 +221,6 @@ try {
                        class="<?php echo isset($errors['email']) ? 'input-error' : ''; ?>">
                 <label for="email">Email</label>
             </div>
-            <?php if (isset($errors['email'])): ?>
-                <p class="error-message"><?php echo $errors['email']; ?></p>
-            <?php endif; ?>
-
             <div class="input-group">
                 <i class="fa fa-user"></i>
                 <input type="text" name="username" placeholder="Username" autocomplete="off" required
@@ -247,41 +228,26 @@ try {
                        class="<?php echo isset($errors['username']) ? 'input-error' : ''; ?>">
                 <label for="username">Username</label>
             </div>
-            <?php if (isset($errors['username'])): ?>
-                <p class="error-message"><?php echo $errors['username']; ?></p>
-            <?php endif; ?>
-
             <div class="input-group">
                 <i class="fa fa-lock"></i>
                 <input type="password" name="password" placeholder="Password" autocomplete="new-password" required
                        class="<?php echo isset($errors['password']) ? 'input-error' : ''; ?>">
                 <label for="password">Password</label>
             </div>
-            <?php if (isset($errors['password'])): ?>
-                <p class="error-message"><?php echo $errors['password']; ?></p>
-            <?php endif; ?>
-
             <div class="input-group">
                 <i class="fa fa-lock"></i>
                 <input type="password" name="confirm_password" placeholder="Confirm Password" autocomplete="new-password" required
                        class="<?php echo isset($errors['confirm_password']) ? 'input-error' : ''; ?>">
                 <label for="confirm_password">Confirm Password</label>
             </div>
-            <?php if (isset($errors['confirm_password'])): ?>
-                <p class="error-message"><?php echo $errors['confirm_password']; ?></p>
-            <?php endif; ?>
-            
             <button type="submit" name="register" class="btn">Daftar</button>
         </form>
-        <p class="or">-----Atau-----</p>
-        <div class="icon">
-        </div>
         <div class="links">
-            <p>Sudah Punya Akun?</p>
-            <button id="loginbutton">Masuk</button>
+            <button id="backToWhitelistBtn">Kembali ke Cek Whitelist</button>
         </div>
     </div>
 
+    <!-- Login Form tetap -->
     <div class="container" id="login">
         <h1 class="form-title">Masuk</h1>
         <form method="POST" action="login.php" autocomplete="off">
@@ -334,8 +300,34 @@ try {
             <button id="signupbutton">Daftar</button>
         </div>
     </div>
-    
     <script src="script.js"></script>
+    <script>
+// Autofill dan kunci prefix '+62 '
+document.addEventListener('DOMContentLoaded', function() {
+    var noWaInput = document.getElementById('no_wa');
+    if (noWaInput) {
+        if (!noWaInput.value.startsWith('+62 ')) {
+            noWaInput.value = '+62 ';
+        }
+        noWaInput.addEventListener('focus', function() {
+            if (!this.value.startsWith('+62 ')) {
+                this.value = '+62 ';
+            }
+        });
+        noWaInput.addEventListener('keydown', function(e) {
+            // Prevent deleting prefix
+            if ((this.selectionStart <= 4 && (e.key === 'Backspace' || e.key === 'Delete')) ||
+                (this.selectionStart < 4 && e.key.length === 1)) {
+                e.preventDefault();
+                this.setSelectionRange(4, 4);
+            }
+        });
+        noWaInput.addEventListener('paste', function(e) {
+            e.preventDefault();
+        });
+    }
+});
+</script>
     <?php
     // --- BLOK BARU: Memaksa form registrasi terbuka jika ada error ---
     if ($registration_attempted && !empty($errors)) {
@@ -343,6 +335,7 @@ try {
         <script>
             document.getElementById('login').style.display = 'none';
             document.getElementById('signup').style.display = 'block';
+            document.getElementById('check-whitelist').style.display = 'none';
         </script>
         ";
     }

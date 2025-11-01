@@ -57,7 +57,15 @@ $daftar_absensi = $stmt_absensi->fetchAll(PDO::FETCH_ASSOC);
                         <td><?php echo htmlspecialchars($absensi['status_lokasi']); ?></td>
                         <td>
                             <?php if (!empty($absensi['foto_absen'])): ?>
-                                <img src="<?php echo 'uploads/' . htmlspecialchars($absensi['foto_absen']); ?>" alt="Foto Absen" style="max-width: 100px; max-height: 100px;">
+                                <?php
+                                    $foto = htmlspecialchars($absensi['foto_absen']);
+                                    if (strpos($foto, 'absen_keluar_') === 0) {
+                                        $path_foto = 'uploads/absen_keluar/' . $foto;
+                                    } else {
+                                        $path_foto = 'uploads/absen_masuk/' . $foto;
+                                    }
+                                ?>
+                                <img src="<?php echo $path_foto; ?>" alt="Foto Absen" style="max-width: 100px; max-height: 100px;">
                             <?php else: ?>
                                 Tidak ada foto
                             <?php endif; ?>

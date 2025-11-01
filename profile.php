@@ -124,6 +124,58 @@ try {
     die("Error mengambil data pengguna: " . $e->getMessage());
 }
 
+// ========================================================
+// --- BLOK 4: Penanganan Simpan/Hapus Tanda Tangan Digital ---
+// ========================================================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simpan_ttd'])) {
+    $signature_data_base64 = $_POST['signature_data'] ?? '';
+    if (!empty($signature_data_base64)) {
+        if (preg_match('/^data:image\/(\w+);base64,/', $signature_data_base64, $type)) {
+            $signature_data_base64 = substr($signature_data_base64, strpos($signature_data_base64, ',') + 1);
+            $type = strtolower($type[1]);
+            if (in_array($type, ['jpg', 'jpeg', 'gif', 'png'])) {
+                $signature_data_biner = base64_decode($signature_data_base64);
+                if ($signature_data_biner !== false) {
+                    $nama_file_ttd = 'ttd_user_' . $user_id . '_' . time() . '.' . $type;
+                    $path_simpan_ttd = 'uploads/tanda_tangan/' . $nama_file_ttd;
+                    if (file_put_contents($path_simpan_ttd, $signature_data_biner)) {
+                        // Hapus ttd lama jika ada
+                        $stmt = $pdo->prepare('SELECT tanda_tangan_file FROM register WHERE id = ?');
+                        $stmt->execute([$user_id]);
+                        $old = $stmt->fetchColumn();
+                        if ($old && file_exists('uploads/tanda_tangan/' . $old)) unlink('uploads/tanda_tangan/' . $old);
+                        // Simpan ke DB
+                        $stmt = $pdo->prepare('UPDATE register SET tanda_tangan_file = ? WHERE id = ?');
+                        $stmt->execute([$nama_file_ttd, $user_id]);
+                        header('Location: profile.php?ttd=sukses');
+                        exit;
+                    } else {
+                        $profile_error = 'Gagal menyimpan file tanda tangan.';
+                    }
+                } else {
+                    $profile_error = 'Data tanda tangan tidak valid.';
+                }
+            } else {
+                $profile_error = 'Tipe file tanda tangan tidak valid.';
+            }
+        } else {
+            $profile_error = 'Format data tanda tangan tidak valid.';
+        }
+    } else {
+        $profile_error = 'Tanda tangan tidak boleh kosong.';
+    }
+}
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['hapus_ttd'])) {
+    $stmt = $pdo->prepare('SELECT tanda_tangan_file FROM register WHERE id = ?');
+    $stmt->execute([$user_id]);
+    $old = $stmt->fetchColumn();
+    if ($old && file_exists('uploads/tanda_tangan/' . $old)) unlink('uploads/tanda_tangan/' . $old);
+    $stmt = $pdo->prepare('UPDATE register SET tanda_tangan_file = NULL WHERE id = ?');
+    $stmt->execute([$user_id]);
+    header('Location: profile.php?ttd=hapus');
+    exit;
+}
+
 $home_url = 'mainpageadmin.php';
 ?>
 <!DOCTYPE html>
@@ -137,7 +189,7 @@ $home_url = 'mainpageadmin.php';
 </head>
 <body>
     <?php include 'navbar.php'; ?>
-    <div class="main-title">Profil Admin</div>
+    <div class="main-title">Profil</div>
     <div class="subtitle-container">
         <p class="subtitle">Kelola informasi profil dan keamanan akun Anda.</p>
     </div>
@@ -145,11 +197,11 @@ $home_url = 'mainpageadmin.php';
     <div class="content-container profile-columns">
         
         <div class="profile-column-left">
-            <h2>Informasi Profil</h2>
+            <h2>Informasi Pribadi</h2>
             
             <div class="profile-picture-container">
                 <?php if (!empty($user_data['foto_profil'])): ?>
-                    <img src="uploads/<?php echo htmlspecialchars($user_data['foto_profil']); ?>" 
+                    <img src="uploads/foto_profil/<?php echo htmlspecialchars($user_data['foto_profil']); ?>" 
                          alt="Foto Profil" 
                          id="profile-pic-preview"
                          onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
@@ -228,12 +280,71 @@ $home_url = 'mainpageadmin.php';
             <h3>Tanda Tangan Digital</h3>
             <div class="signature-container">
                 <?php if (!empty($user_data['tanda_tangan_file'])): ?>
-                    <img src="uploads/<?php echo htmlspecialchars($user_data['tanda_tangan_file']); ?>" alt="Tanda Tangan" style="max-width: 250px; border: 1px solid #ccc; padding: 5px;">
+                    <img src="uploads/tanda_tangan/<?php echo htmlspecialchars($user_data['tanda_tangan_file']); ?>" alt="Tanda Tangan" style="max-width: 250px; border: 1px solid #ccc; padding: 5px;">
+                    <form action="profile.php" method="POST" id="form-hapus-ttd" style="margin-top:10px;">
+                        <button type="submit" name="hapus_ttd" class="btn" onclick="return confirm('Yakin hapus tanda tangan?')">Hapus Tanda Tangan</button>
+                    </form>
+                    <button type="button" id="btn-edit-ttd" class="btn" style="margin-top:10px;">Ganti Tanda Tangan</button>
+                    <div id="edit-ttd-container" style="display:none; margin-top:15px;">
+                        <form action="profile.php" method="POST" id="form-edit-ttd">
+                            <label for="signature-pad">Gambar Tanda Tangan Baru:</label><br>
+                            <canvas id="signature-pad" width="400" height="200" style="border:1px solid #000;"></canvas><br>
+                            <button type="button" id="clear-signature">Hapus</button>
+                            <input type="hidden" name="signature_data" id="signature-data">
+                            <br><br>
+                            <button type="submit" name="simpan_ttd" class="btn">Simpan Tanda Tangan Baru</button>
+                            <button type="button" id="cancel-edit-ttd" class="btn">Batal</button>
+                        </form>
+                    </div>
                 <?php else: ?>
                     <p>(Belum ada tanda tangan)</p>
+                    <form action="profile.php" method="POST" id="form-edit-ttd">
+                        <label for="signature-pad">Gambar Tanda Tangan:</label><br>
+                        <canvas id="signature-pad" width="400" height="200" style="border:1px solid #000;"></canvas><br>
+                        <button type="button" id="clear-signature">Hapus</button>
+                        <input type="hidden" name="signature_data" id="signature-data">
+                        <br><br>
+                        <button type="submit" name="simpan_ttd" class="btn">Simpan Tanda Tangan</button>
+                    </form>
                 <?php endif; ?>
                 <br>
-                </div>
+            </div>
+            <script src="https://cdn.jsdelivr.net/npm/signature_pad@5.0.10/dist/signature_pad.umd.min.js"></script>
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var canvas = document.getElementById('signature-pad');
+                var clearBtn = document.getElementById('clear-signature');
+                var input = document.getElementById('signature-data');
+                var form = document.getElementById('form-edit-ttd');
+                var editBtn = document.getElementById('btn-edit-ttd');
+                var editContainer = document.getElementById('edit-ttd-container');
+                var cancelBtn = document.getElementById('cancel-edit-ttd');
+                var signaturePad;
+                if (canvas) {
+                    signaturePad = new SignaturePad(canvas, { penColor: 'rgb(0,0,0)' });
+                    if (clearBtn) clearBtn.addEventListener('click', function() { signaturePad.clear(); });
+                    if (form) form.addEventListener('submit', function(e) {
+                        if (signaturePad.isEmpty()) {
+                            alert('Mohon gambar tanda tangan Anda.');
+                            e.preventDefault();
+                        } else {
+                            input.value = signaturePad.toDataURL('image/png');
+                        }
+                    });
+                }
+                if (editBtn && editContainer) {
+                    editBtn.addEventListener('click', function() {
+                        editContainer.style.display = 'block';
+                    });
+                }
+                if (cancelBtn && editContainer) {
+                    cancelBtn.addEventListener('click', function() {
+                        editContainer.style.display = 'none';
+                        if (signaturePad) signaturePad.clear();
+                    });
+                }
+            });
+            </script>
         </div>
     </div>
 

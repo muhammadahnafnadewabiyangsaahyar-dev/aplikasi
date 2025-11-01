@@ -5,7 +5,7 @@
 
 # Opsi yang lebih ketat: hanya izinkan gambar
 Options -Indexes
-<FilesMatch "\.(jpg|jpeg|png|gif)$">
+<FilesMatch "\.(jpg|jpeg|png)$">
     Order Allow,Deny
     Allow from all
 </FilesMatch>

@@ -41,6 +41,7 @@ if ($is_logged_in) {
         $approvelembur_url = 'approve_lembur.php';
         $view_user_url = 'view_user.php';
         $view_absensi_url = 'view_absensi.php';
+        $whitelist_url = 'whitelist.php'; // Tambahkan whitelist
     }
 }
 ?>
@@ -64,6 +65,7 @@ if ($is_logged_in) {
                 <a href="<?php echo $view_user_url; ?>" class="viewusers">Daftar Pengguna</a>
                 <a href="<?php echo $view_absensi_url; ?>" class="viewabsensi">Daftar Absensi</a>
                 <a href="<?php echo $approvelembur_url; ?>" class="lembur">Approve Lembur</a>
+                <a href="<?php echo $whitelist_url; ?>" class="whitelist">Whitelist</a>
             <?php endif; ?>
 
             <a href="logout.php" class="logout">Logout</a>

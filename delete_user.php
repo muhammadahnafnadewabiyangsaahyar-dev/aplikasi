@@ -34,7 +34,24 @@ if ($user_id_to_delete == $admin_id) {
     exit;
 }
 
-// 5. Lakukan penghapusan menggunakan prepared statement PDO
+// 5. Ambil nama file foto profil dan tanda tangan user
+$stmt_files = $pdo->prepare('SELECT foto_profil, tanda_tangan_file FROM register WHERE id = ?');
+$stmt_files->execute([$user_id_to_delete]);
+$user_files = $stmt_files->fetch(PDO::FETCH_ASSOC);
+if ($user_files) {
+    // Hapus foto profil jika ada dan bukan default
+    if (!empty($user_files['foto_profil']) && $user_files['foto_profil'] != 'default.png') {
+        $foto_path = 'uploads/foto_profil/' . $user_files['foto_profil'];
+        if (file_exists($foto_path)) @unlink($foto_path);
+    }
+    // Hapus tanda tangan jika ada
+    if (!empty($user_files['tanda_tangan_file'])) {
+        $ttd_path = 'uploads/tanda_tangan/' . $user_files['tanda_tangan_file'];
+        if (file_exists($ttd_path)) @unlink($ttd_path);
+    }
+}
+
+// 6. Lakukan penghapusan menggunakan prepared statement PDO
 $sql_delete = "DELETE FROM register WHERE id = ?";
 $stmt_delete = $pdo->prepare($sql_delete);
 $stmt_delete->execute([$user_id_to_delete]);

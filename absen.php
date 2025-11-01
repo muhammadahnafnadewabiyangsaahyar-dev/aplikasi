@@ -60,12 +60,29 @@ $home_url = ($_SESSION['role'] ?? '') === 'admin' ? 'mainpageadmin.php' : 'mainp
             <input type="hidden" name="foto_absensi_base64" id="input-foto-base64">
             <input type="hidden" name="tipe_absen" id="input-tipe-absen">
 
-            <?php if ($tipe_default !== 'done'): ?>
-                <button type="button" id="btn-absen" data-tipe="<?php echo $tipe_default; ?>" disabled><?php echo $label_default; ?></button>
-            <?php else: ?>
-                <button type="button" id="btn-absen" disabled><?php echo $label_default; ?></button>
-            <?php endif; ?>
+            <div style="display: flex; gap: 16px; justify-content: center; margin-top: 16px;">
+                <button type="button" id="btn-absen-masuk" data-status="<?php
+                    if ($tipe_default === 'masuk') {
+                        echo 'belum_masuk';
+                    } elseif ($tipe_default === 'keluar') {
+                        echo 'sudah_masuk';
+                    } else {
+                        echo 'sudah_keluar';
+                    }
+                ?>" class="btn-absen" disabled>Absen Masuk</button>
+                <button type="button" id="btn-absen-keluar" class="btn-absen" disabled>Absen Keluar</button>
+            </div>
         </form>
+        <!-- MODAL KONFIRMASI LEMBUR -->
+        <div id="modal-lembur" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); align-items:center; justify-content:center;">
+            <div style="background:#fff; padding:32px 24px; border-radius:12px; max-width:90vw; width:350px; margin:auto; box-shadow:0 4px 24px rgba(0,0,0,0.2); text-align:center;">
+                <h3 style="margin-bottom:16px;">Apakah kamu melakukan overwork/lembur hari ini?</h3>
+                <div style="display:flex; gap:16px; justify-content:center; margin-top:24px;">
+                    <button id="btn-lembur-ya" style="padding:8px 24px; background:#007bff; color:#fff; border:none; border-radius:6px;">Ya</button>
+                    <button id="btn-lembur-tidak" style="padding:8px 24px; background:#ccc; color:#333; border:none; border-radius:6px;">Tidak</button>
+                </div>
+            </div>
+        </div>
          <?php if(isset($_GET['error'])): ?>
             <p class="error-message">Error: <?php echo htmlspecialchars($_GET['error']); ?> 
             <?php if(isset($_GET['msg'])) echo '- ' . htmlspecialchars($_GET['msg']); ?>

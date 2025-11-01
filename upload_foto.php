@@ -16,10 +16,16 @@ $user_role = $_SESSION['role']; // 'admin' or 'user'
 // Tentukan halaman redirect (profile.php atau profileadmin.php)
 $redirect_page = ($user_role == 'admin') ? 'profileadmin.php' : 'profile.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_foto'])) {
+$folder_upload = 'uploads/foto_profil/';
+if (!is_dir($folder_upload)) {
+    mkdir($folder_upload, 0777, true);
+}
+if (!is_writable($folder_upload)) {
+    $error_message = 'Folder uploads/foto_profil/ tidak writeable oleh PHP.';
+}
 
-    if (isset($_FILES['foto_profil']) && $_FILES['foto_profil']['error'] == 0) {
-        
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_foto']) && !$error_message) {
+    if (isset($_FILES['foto_profil'])) {
         $file = $_FILES['foto_profil'];
         $fileName = $file['name'];
         $fileTmpName = $file['tmp_name'];
@@ -33,52 +39,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_foto'])) {
         // Whitelist ekstensi yang diizinkan
         $allowed = ['jpg', 'jpeg', 'png'];
 
-        if (in_array($fileActualExt, $allowed)) {
-            if ($fileError === 0) {
-                // Batas ukuran file 5MB (sesuai kode asli Anda)
-                if ($fileSize < 5000000) { 
+        if ($fileError !== 0) {
+            $error_message = "Terjadi error saat upload file (Error code: $fileError).";
+        } elseif (!in_array($fileActualExt, $allowed)) {
+            $error_message = "Ekstensi file tidak diizinkan. Hanya jpg, jpeg, png.";
+        } elseif ($fileSize >= 5000000) {
+            $error_message = "Ukuran file terlalu besar. Maksimal 5MB.";
+        } else {
+            // Generate nama file unik
+            $nama_file_baru = $user_id . '_' . time() . '.' . $fileActualExt;
+            $tujuan_upload = $folder_upload . $nama_file_baru;
 
-                    // ========================================================
-                    // --- BLOK PERBAIKAN: Gunakan PDO untuk update DB ---
-                    // ========================================================
-                    try {
-                        // Ambil nama file lama untuk dihapus (opsional tapi bagus)
-                        $stmt_old = $pdo->prepare("SELECT foto_profil FROM register WHERE id = ?");
-                        $stmt_old->execute([$user_id]);
-                        $old_foto = $stmt_old->fetchColumn();
+            if (move_uploaded_file($fileTmpName, $tujuan_upload)) {
+                try {
+                    // Ambil nama file lama untuk dihapus (opsional tapi bagus)
+                    $stmt_old = $pdo->prepare("SELECT foto_profil FROM register WHERE id = ?");
+                    $stmt_old->execute([$user_id]);
+                    $old_foto = $stmt_old->fetchColumn();
 
-                        // Update database dengan nama file baru
-                        $sql_update_foto = "UPDATE register SET foto_profil = ? WHERE id = ?";
-                        $stmt = $pdo->prepare($sql_update_foto);
-                        
-                        if ($stmt->execute([$nama_file_baru, $user_id])) {
-                            $success_message = "Foto profil berhasil diupdate!";
-                            
-                            // Hapus file lama jika ada & bukan file default
-                            if ($old_foto && $old_foto != 'default.png' && file_exists('uploads/' . $old_foto)) {
-                                @unlink('uploads/' . $old_foto);
-                            }
-                            
-                            // JS untuk merefresh gambar di halaman utama (parent)
-                            echo '<script>parent.document.getElementById("profile-pic-preview").src = "' . $tujuan_upload . '?' . time() . '";</script>';
-                            
-                        } else {
-                            $error_message = "Gagal menyimpan data ke database.";
-                            @unlink($tujuan_upload); // Hapus file jika gagal update DB
+                    // Update database dengan nama file baru
+                    $sql_update_foto = "UPDATE register SET foto_profil = ? WHERE id = ?";
+                    $stmt = $pdo->prepare($sql_update_foto);
+                    if ($stmt->execute([$nama_file_baru, $user_id])) {
+                        $success_message = "Foto profil berhasil diupdate!";
+                        // Hapus file lama jika ada & bukan file default
+                        if ($old_foto && $old_foto != 'default.png' && file_exists($folder_upload . $old_foto)) {
+                            @unlink($folder_upload . $old_foto);
                         }
-                    } catch (PDOException $e) {
-                        $error_message = "Database error: " . $e->getMessage();
+                        // JS untuk merefresh gambar di halaman utama (parent)
+                        echo '<script>parent.document.getElementById("profile-pic-preview").src = "' . $tujuan_upload . '?' . time() . '";</script>';
+                    } else {
+                        $error_message = "Gagal menyimpan data ke database.";
                         @unlink($tujuan_upload); // Hapus file jika gagal update DB
                     }
-                    // ========================================================
-
-                } else {
-                    $error_message = "Gagal memindahkan file yang diupload.";
+                } catch (PDOException $e) {
+                    $error_message = "Database error: " . $e->getMessage();
+                    @unlink($tujuan_upload); // Hapus file jika gagal update DB
                 }
+            } else {
+                $error_message = "Gagal memindahkan file yang diupload.";
             }
         }
+    } else {
+        $error_message = 'Tidak ada file yang diupload.';
     }
 }
+
+file_put_contents('debug_upload.txt', 'POST: ' . json_encode($_POST) . ' FILES: ' . json_encode($_FILES) . "\n", FILE_APPEND);
 ?>
 
 <!DOCTYPE html>
@@ -97,10 +104,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_foto'])) {
 <body>
     <form action="upload_foto.php" method="POST" enctype="multipart/form-data">
         <input type="file" name="foto_profil" required>
-        <button type="submit" class="btn-small">Upload</button>
+        <button type="submit" name="submit_foto" class="btn-small">Upload</button>
     </form>
     <?php if ($error_message): ?>
-        <p style="color:red;"><?php echo $error_message; ?></p>
+        <p style="color:red;">Foto gagal diupload: <?php echo htmlspecialchars($error_message); ?></p>
     <?php endif; ?>
     <?php if ($success_message): ?>
         <p style="color:green;"><?php echo $success_message; ?></p>

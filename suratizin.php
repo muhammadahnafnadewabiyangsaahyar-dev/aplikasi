@@ -42,11 +42,33 @@ if ($user_ttd_data) {
     
     <div class="content-container"> 
         <i class="fa fa-info-circle info-icon"></i>
-        <p class="info-text">Halaman ini diperuntukkan bagi seluruh karyawan KAORI Indonesia untuk mengajukan surat izin dengan mudah dan cepat. Silakan klik tombol di bawah untuk memulai proses pengajuan surat izin Anda.</p>
-        <div class="btn-apply" id="btn-apply">Ajukan Surat Izin</div>
+        <div class="info-text" style="background:#fff3cd;color:#856404;border:1px solid #ffeeba;padding:10px 12px;border-radius:4px;">
+            <b>Halaman pengajuan surat izin sedang tidak tersedia sementara.</b><br>Silakan kembali lagi nanti.
+        </div>
+        <!-- <p class="info-text">Halaman ini diperuntukkan bagi seluruh karyawan KAORI Indonesia untuk mengajukan surat izin dengan mudah dan cepat. Silakan klik tombol di bawah untuk memulai proses pengajuan surat izin Anda.</p>
+        <div class="btn-apply" id="btn-apply">Ajukan Surat Izin</div> -->
     </div>
 
     <div class="content-container" id="form-container" style="display: none;"> 
+        <?php if (isset($_GET['error']) && (
+            !empty($_POST) || // Sudah submit POST
+            !empty($_REQUEST['perihal']) || !empty($_REQUEST['tanggal_izin']) || !empty($_REQUEST['tanggal_selesai']) || !empty($_REQUEST['lama_izin']) || !empty($_REQUEST['alasan_izin'])
+        )): ?>
+            <div class="error-message" style="color: #b00; background: #fff3f3; border: 1px solid #b00; padding: 8px; margin-bottom: 10px; border-radius: 4px;">
+                <?php
+                $errorMsg = 'Terjadi kesalahan.';
+                if ($_GET['error'] === 'datakosong') $errorMsg = 'Semua field wajib diisi.';
+                elseif ($_GET['error'] === 'ttdkosong') $errorMsg = 'Tanda tangan wajib diisi.';
+                elseif ($_GET['error'] === 'tipettdditidakvalid') $errorMsg = 'Tipe file tanda tangan tidak valid.';
+                elseif ($_GET['error'] === 'dekodettdditidakvalid') $errorMsg = 'Data tanda tangan tidak valid.';
+                elseif ($_GET['error'] === 'gagalsimpanttd') $errorMsg = 'Gagal menyimpan file tanda tangan.';
+                elseif ($_GET['error'] === 'formatttdditidakvalid') $errorMsg = 'Format data tanda tangan tidak valid.';
+                elseif ($_GET['error'] === 'gagalsimpansurat') $errorMsg = 'Gagal menyimpan file surat.';
+                elseif ($_GET['error'] === 'gagalinsertdb') $errorMsg = 'Gagal menyimpan data ke database.';
+                echo htmlspecialchars($errorMsg);
+                ?>
+            </div>
+        <?php endif; ?>
         <p class="fill-info">Silakan lengkapi formulir pengajuan surat izin di bawah ini:</p>
         <form method="POST" action="docx.php" class="form-surat-izin">
             <div class="input-group">
@@ -84,20 +106,7 @@ if ($user_ttd_data) {
                 <div class="input-group">
                     <label>Tanda Tangan:</label>
                     <p>Tanda tangan sudah tersimpan di profil Anda.</p> 
-                    <img src="uploads/<?php echo htmlspecialchars($tanda_tangan_tersimpan); ?>" alt="Tanda Tangan Tersimpan" style="max-width: 150px; border: 1px solid #ccc; margin-top: 5px;">
-                    <br>
-                    <button type="button" id="edit-signature-btn">Ubah Tanda Tangan</button>
-                    <div class="edit-signature-container" id="edit-signature-container" style="display: none; margin-top: 15px;">
-                        <form action="update_signature.php" method="POST" id="edit-signature-form">
-                            <label for="edit-signature">Gambar Tanda Tangan Baru:</label><br>
-                            <canvas id="edit-signature-pad" class="edit-signature-pad" width="400" height="200" style="border: 1px solid #000;"></canvas><br>
-                            <button type="button" id="clear-new-signature">Hapus</button>
-                            <input type="hidden" name="edit_signature_data" id="edit-signature-data">
-                            <br><br>
-                            <button type="submit">Simpan Tanda Tangan Baru</button>
-                            <button type="button" id="cancel-edit-signature">Batal</button>
-                        </form>
-                    </div>
+                    <img src="uploads/tanda_tangan/<?php echo htmlspecialchars($tanda_tangan_tersimpan); ?>" alt="Tanda Tangan Tersimpan" style="max-width: 150px; border: 1px solid #ccc; margin-top: 5px;">
                 </div>
             <?php endif; ?> 
             <div class="input-group">
@@ -118,7 +127,6 @@ if ($user_ttd_data) {
     </div>
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@5.0.10/dist/signature_pad.umd.min.js"></script> 
     <script src="script_izin.js"></script>
-    <script src="script_ubah_ttd.js"></script>
     <script>
     // Otomatis hitung lama izin (hari) setelah memilih tanggal
     document.addEventListener('DOMContentLoaded', function() {

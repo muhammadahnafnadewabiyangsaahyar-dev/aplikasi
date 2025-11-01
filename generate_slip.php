@@ -92,16 +92,25 @@ $TBS->MergeField('gaji_bersih', $gaji_bersih);
 $TBS->MergeField('date', $tanggal_cetak);         // Placeholder [date] ?
 
 // 10. Masukkan Gambar Tanda Tangan Finance
-$path_ttd_finance = 'uploads/ttd_agung_basir.png'; // Ganti path jika perlu
+$path_ttd_finance = 'uploads/tanda_tangan/ttd_agung_basir.png'; // Ganti path jika perlu
 if (file_exists($path_ttd_finance)) {
     $TBS->PlugIn(OPENTBS_CHANGE_PICTURE, 'ttd', $path_ttd_finance); // Placeholder Alt Text 'ttd'
 } else {
     error_log("File TTD Finance tidak ditemukan: " . $path_ttd_finance);
 }
 
-// 11. Generate Output DOCX
-$nama_file_download = 'Slip Gaji - ' . $nama_karyawan . ' - ' . $periode . '.docx';
-$nama_file_download = preg_replace('/[^A-Za-z0-9_\-\.\s]/', '', $nama_file_download); 
-$TBS->Show(OPENTBS_DOWNLOAD, $nama_file_download);
-exit; 
+// 11. Generate Output DOCX dan Simpan ke uploads/slip_gaji/
+$folder_slip_gaji = 'uploads/slip_gaji/';
+if (!is_dir($folder_slip_gaji)) {
+    mkdir($folder_slip_gaji, 0777, true);
+}
+$nama_file_download = 'Slip_Gaji_' . preg_replace('/[^A-Za-z0-9_\-]/', '', $nama_karyawan) . '_' . $periode . '_' . time() . '.docx';
+$path_simpan_slip = $folder_slip_gaji . $nama_file_download;
+$TBS->Show(OPENTBS_FILE, $path_simpan_slip); // Simpan ke file
+
+// 12. Download ke user
+header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+header('Content-Disposition: attachment; filename="' . $nama_file_download . '"');
+readfile($path_simpan_slip);
+exit;
 ?>

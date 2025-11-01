@@ -105,12 +105,11 @@ try {
             }
 
             $nama_file_foto = 'absen_' . $user_id . '_' . time() . '.' . ($type == 'jpeg' ? 'jpg' : $type);
-            $path_simpan_foto = 'uploads/' . $nama_file_foto;
-            
-            // PENTING: Pastikan folder 'uploads' ada dan writable
-            if (!is_dir('uploads')) {
-                mkdir('uploads', 0755, true);
+            $folder_masuk = 'uploads/absen_masuk/';
+            if (!is_dir($folder_masuk)) {
+                mkdir($folder_masuk, 0755, true);
             }
+            $path_simpan_foto = $folder_masuk . $nama_file_foto;
 
             if (!file_put_contents($path_simpan_foto, $data_gambar_biner)) {
                 send_json(['status'=>'error','message'=>'Gagal simpan foto']);
@@ -141,14 +140,13 @@ try {
         }
         
         // Cek duplikat absen masuk
-        $sql_cek = "SELECT id FROM absensi WHERE user_id = ? AND tanggal_absensi = ?";
-        $stmt_cek = $pdo->prepare($sql_cek);
-        $stmt_cek->execute([$user_id, $tanggal_hari_ini]);
-        
-        if ($stmt_cek->fetch()) {
-            if ($nama_file_foto && file_exists('uploads/' . $nama_file_foto)) unlink('uploads/' . $nama_file_foto); 
-            send_json(['status'=>'error','message'=>'Sudah absen masuk hari ini']);
-        }
+        // $sql_cek = "SELECT id FROM absensi WHERE user_id = ? AND tanggal_absensi = ?";
+        // $stmt_cek = $pdo->prepare($sql_cek);
+        // $stmt_cek->execute([$user_id, $tanggal_hari_ini]);
+        // if ($stmt_cek->fetch()) {
+        //     if ($nama_file_foto && file_exists('uploads/' . $nama_file_foto)) unlink('uploads/' . $nama_file_foto); 
+        //     send_json(['status'=>'error','message'=>'Sudah absen masuk hari ini']);
+        // }
 
         // INSERT data absen masuk 
         $sql_insert = "INSERT INTO absensi 
@@ -171,7 +169,6 @@ try {
         if (!$data_absen_masuk) {
             send_json(['status'=>'error','message'=>'Belum absen masuk atau sudah absen keluar']);
         }
-        
         $absen_id_yang_diupdate = $data_absen_masuk['id'];
 
         // --- Ambil data shift user hari ini ---
@@ -187,12 +184,45 @@ try {
             $is_overwork = true;
         }
 
+        // --- Simpan foto absen keluar jika ada ---
+        $nama_file_foto_keluar = null;
+        if (!empty($foto_base64)) {
+            if (preg_match('/^data:image\/(\w+);base64,/', $foto_base64, $type)) {
+                $data_gambar_base64 = substr($foto_base64, strpos($foto_base64, ',') + 1);
+                $type = strtolower($type[1]);
+                if (!in_array($type, ['jpg', 'jpeg', 'png'])) {
+                    send_json(['status'=>'error','message'=>'Tipe foto keluar tidak valid']);
+                }
+                $data_gambar_biner = base64_decode($data_gambar_base64);
+                if ($data_gambar_biner === false) {
+                    send_json(['status'=>'error','message'=>'Gagal decode foto keluar']);
+                }
+                $nama_file_foto_keluar = 'absen_keluar_' . $user_id . '_' . time() . '.' . ($type == 'jpeg' ? 'jpg' : $type);
+                $folder_keluar = 'uploads/absen_keluar/';
+                if (!is_dir($folder_keluar)) {
+                    mkdir($folder_keluar, 0755, true);
+                }
+                $path_simpan_foto_keluar = $folder_keluar . $nama_file_foto_keluar;
+                if (!file_put_contents($path_simpan_foto_keluar, $data_gambar_biner)) {
+                    send_json(['status'=>'error','message'=>'Gagal simpan foto keluar']);
+                }
+                // Update kolom foto_absen di absensi (bisa disesuaikan jika ingin kolom terpisah)
+                $sql_update_foto = "UPDATE absensi SET foto_absen = ? WHERE id = ?";
+                $stmt_update_foto = $pdo->prepare($sql_update_foto);
+                $stmt_update_foto->execute([$nama_file_foto_keluar, $absen_id_yang_diupdate]);
+            }
+        }
+
         // UPDATE waktu_keluar dan status_lembur
         $sql_update = "UPDATE absensi SET waktu_keluar = NOW(), status_lembur = ? WHERE id = ?";
         $status_lembur = $is_overwork ? 'Pending' : 'Not Applicable';
         $stmt_update = $pdo->prepare($sql_update);
         $stmt_update->execute([$status_lembur, $absen_id_yang_diupdate]);
-        send_json(['status'=>'success','next'=>'done']);
+        if ($is_overwork) {
+            send_json(['status'=>'success','next'=>'konfirmasi_lembur','absen_id'=>$absen_id_yang_diupdate]);
+        } else {
+            send_json(['status'=>'success','next'=>'done','absen_id'=>$absen_id_yang_diupdate]);
+        }
     }
 
 } catch (PDOException $e) {

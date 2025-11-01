@@ -3,8 +3,25 @@ session_start();
 include 'connect.php';
 
 // 1. Keamanan: Pastikan hanya admin dengan posisi HR, Finance, atau Owner yang bisa akses
-$allowed_positions = ['HR', 'Finance', 'Owner', 'superadmin'];
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin' || !isset($_SESSION['posisi']) || !in_array(strtolower($_SESSION['posisi']), array_map('strtolower', $allowed_positions))) {
+$allowed_positions = ['HR','Finance','Owner','superadmin'];
+
+// Ambil posisi dari database jika belum ada di session
+if (!isset($_SESSION['posisi'])) {
+    if (isset($_SESSION['user_id'])) {
+        $stmt_pos = $pdo->prepare("SELECT posisi FROM register WHERE id = ?");
+        $stmt_pos->execute([$_SESSION['user_id']]);
+        $row_pos = $stmt_pos->fetch(PDO::FETCH_ASSOC);
+        if ($row_pos && !empty($row_pos['posisi'])) {
+            $_SESSION['posisi'] = $row_pos['posisi'];
+        }
+    }
+}
+
+// Normalisasi posisi untuk perbandingan (case-insensitive, hilangkan spasi)
+$user_posisi = isset($_SESSION['posisi']) ? strtolower(trim($_SESSION['posisi'])) : '';
+$allowed_positions_normalized = array_map(function($p) { return strtolower(trim($p)); }, $allowed_positions);
+
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin' || !$user_posisi || !in_array($user_posisi, $allowed_positions_normalized)) {
     header('Location: index.php?error=unauthorized');
     exit;
 }
@@ -63,21 +80,7 @@ $home_url = ($_SESSION['role'] == 'admin') ? 'mainpageadmin.php' : 'mainpageuser
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
 </head>
 <body>
-    <div class="headercontainer">
-        <img class="logo" src="logo.png" alt="Logo">
-        <div class="nav-links">
-            <a href="<?php echo $home_url; ?>" class="home">Home</a>
-            <a href="approve.php" class="surat">Surat Izin</a>
-            <a href="profileadmin.php" class="profile">Profile</a>
-            <a href="absen.php" class="absensi">Absensi</a>
-            <a href="view_user.php" class="viewusers">Daftar Pengguna</a>
-            <a href="view_absensi.php" class="viewabsensi">Daftar Absensi</a>
-            <a href="rekapabsen.php" class="rekapabsen">Rekap Absensi</a>
-            <a href="slipgaji.php" class="slipgaji">Slip Gaji</a>
-            <a href="approve_lembur.php" class="approvelembur">Approve Lembur</a>
-            <a href="logout.php" class="logout">Logout</a>
-        </div>
-    </div>
+        <?php include 'navbar.php'; ?>
     <div class="main-title">Teman KAORI</div>
     <div class="subtitle-container">
         <p class="subtitle">Selamat Datang, <?php echo htmlspecialchars($_SESSION['nama_lengkap'] ?? $_SESSION['username']); ?> [<?php echo htmlspecialchars($_SESSION['role']); ?>]</p>

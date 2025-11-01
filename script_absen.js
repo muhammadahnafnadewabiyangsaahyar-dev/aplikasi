@@ -4,7 +4,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Ambil Elemen-elemen Penting ---
     const video = document.getElementById('kamera-preview');
     const canvas = document.getElementById('kamera-canvas');
-    const btnAbsen = document.getElementById('btn-absen');
+    const btnAbsenMasuk = document.getElementById('btn-absen-masuk');
+    const btnAbsenKeluar = document.getElementById('btn-absen-keluar');
     const statusLokasi = document.getElementById('status-lokasi');
     
     // Ambil form tersembunyi
@@ -21,7 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Fungsi Utama 1: Memulai Kamera ---
     async function startCamera() {
         // Cek apakah tombol absen ada (jika sudah absen keluar, tombol tidak ada)
-        if (!btnAbsen) {
+        if (!btnAbsenMasuk && !btnAbsenKeluar) {
             statusLokasi.textContent = "Absensi hari ini sudah selesai.";
             return;
         }
@@ -46,15 +47,17 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (err) {
             console.error("Error Kamera:", err);
             statusLokasi.textContent = "Error: Kamera tidak diizinkan atau tidak ditemukan.";
-            btnAbsen.disabled = true;
-            btnAbsen.textContent = "Kamera Diblokir";
+            btnAbsenMasuk.disabled = true;
+            btnAbsenKeluar.disabled = true;
+            btnAbsenMasuk.textContent = "Kamera Diblokir";
+            btnAbsenKeluar.textContent = "Kamera Diblokir";
         }
     }
 
     // --- Fungsi Utama 2: Mendapatkan Lokasi ---
     function setupLokasi() {
         // Cek apakah tombol absen ada
-        if (!btnAbsen) return; 
+        if (!btnAbsenMasuk && !btnAbsenKeluar) return; 
 
         if ('geolocation' in navigator) {
             statusLokasi.textContent = "Mendeteksi lokasi Anda...";
@@ -68,15 +71,18 @@ document.addEventListener("DOMContentLoaded", () => {
                     statusLokasi.textContent = "Lokasi ditemukan.";
                     
                     // Aktifkan tombol jika lokasi sudah siap
-                    btnAbsen.disabled = false;
+                    btnAbsenMasuk.disabled = false;
+                    btnAbsenKeluar.disabled = false;
                     console.log("Lokasi:", koordinatPengguna);
                 },
                 (err) => {
                     // Gagal dapat lokasi
                     console.error("Error Lokasi:", err);
                     statusLokasi.textContent = "Error: Lokasi tidak diizinkan atau gagal dideteksi.";
-                    btnAbsen.disabled = true;
-                    btnAbsen.textContent = "Lokasi Diblokir";
+                    btnAbsenMasuk.disabled = true;
+                    btnAbsenKeluar.disabled = true;
+                    btnAbsenMasuk.textContent = "Lokasi Diblokir";
+                    btnAbsenKeluar.textContent = "Lokasi Diblokir";
                 },
                 {
                     enableHighAccuracy: true, // Minta akurasi tinggi
@@ -86,7 +92,8 @@ document.addEventListener("DOMContentLoaded", () => {
             );
         } else {
             statusLokasi.textContent = "Error: Geolocation tidak didukung di browser ini.";
-            btnAbsen.disabled = true;
+            btnAbsenMasuk.disabled = true;
+            btnAbsenKeluar.disabled = true;
         }
     }
 
@@ -115,41 +122,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- Menjalankan Fungsi ---
 
-    // 1. Cek dulu apakah tombol absen ada di halaman
-    if (btnAbsen) {
-        // Tombol ada, berarti belum absen keluar atau absensi belum selesai
-        btnAbsen.disabled = true;
-        tipeAbsenSaatIni = btnAbsen.getAttribute('data-tipe') || 'masuk';
-        setupLokasi();
-        if (tipeAbsenSaatIni === 'masuk') {
-            startCamera();
-            btnAbsen.textContent = 'Absen Masuk';
-        } else if (tipeAbsenSaatIni === 'keluar') {
-            statusLokasi.textContent = "Mendeteksi lokasi Anda untuk absen keluar...";
-            btnAbsen.textContent = 'Absen Keluar';
+    // 1. Cek apakah tombol absen ada di halaman
+    if (btnAbsenMasuk && btnAbsenKeluar) {
+        // --- Status awal tombol ---
+        // Status absen user didapat dari atribut data-status pada salah satu tombol (set di PHP)
+        // data-status: 'belum_masuk', 'sudah_masuk', 'sudah_keluar'
+        const statusAbsen = btnAbsenMasuk.getAttribute('data-status') || 'belum_masuk';
+        if (statusAbsen === 'belum_masuk') {
+            btnAbsenMasuk.disabled = false;
+            btnAbsenKeluar.disabled = true;
+        } else if (statusAbsen === 'sudah_masuk') {
+            btnAbsenMasuk.disabled = true;
+            btnAbsenKeluar.disabled = false;
         } else {
-            // Sudah absen masuk & keluar, disable tombol
-            btnAbsen.disabled = true;
-            btnAbsen.textContent = 'Absensi Selesai';
+            btnAbsenMasuk.disabled = true;
+            btnAbsenKeluar.disabled = true;
         }
-        btnAbsen.addEventListener('click', async () => {
+        setupLokasi();
+        startCamera();
+        // Handler Absen Masuk
+        btnAbsenMasuk.addEventListener('click', async () => {
             if (!koordinatPengguna) {
                 alert("Lokasi belum siap. Mohon tunggu atau izinkan lokasi.");
                 return;
             }
-            btnAbsen.disabled = true;
-            btnAbsen.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Memproses...';
-            let fotoBase64 = null;
-            if (tipeAbsenSaatIni === 'masuk') {
-                fotoBase64 = ambilFoto();
-                stopCamera();
-            }
+            btnAbsenMasuk.disabled = true;
+            btnAbsenMasuk.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Memproses...';
+            let fotoBase64 = ambilFoto();
             inputLat.value = koordinatPengguna.latitude;
             inputLon.value = koordinatPengguna.longitude;
-            inputTipe.value = tipeAbsenSaatIni;
+            inputTipe.value = 'masuk';
             inputFoto.value = fotoBase64;
-
-            // --- SUBMIT VIA AJAX ---
             const formData = new FormData(formAbsensi);
             try {
                 const response = await fetch('proses_absensi.php', {
@@ -158,15 +161,65 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
                 const result = await response.json();
                 if (result.status === 'success') {
-                    if (result.next === 'keluar') {
-                        window.ubahTombolAbsen('keluar');
-                        tipeAbsenSaatIni = 'keluar';
-                        statusLokasi.textContent = 'Silakan lakukan absen keluar saat pulang.';
-                    } else if (result.next === 'done') {
-                        window.ubahTombolAbsen('done');
-                        statusLokasi.textContent = 'Absensi hari ini sudah selesai.';
-                    }
-                    btnAbsen.disabled = false;
+                    btnAbsenMasuk.innerHTML = 'Absen Masuk';
+                    btnAbsenKeluar.disabled = false;
+                    btnAbsenMasuk.disabled = true;
+                    statusLokasi.textContent = 'Silakan lakukan absen keluar saat pulang.';
+                } else {
+                    alert(result.message || 'Terjadi error.');
+                    window.location.reload();
+                }
+            } catch (e) {
+                alert('Gagal mengirim absensi. Silakan coba lagi.');
+                window.location.reload();
+            }
+        });
+        // Handler Absen Keluar
+        btnAbsenKeluar.addEventListener('click', async () => {
+            if (!koordinatPengguna) {
+                alert("Lokasi belum siap. Mohon tunggu atau izinkan lokasi.");
+                return;
+            }
+            btnAbsenKeluar.disabled = true;
+            btnAbsenKeluar.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Memproses...';
+            let fotoBase64 = ambilFoto();
+            inputLat.value = koordinatPengguna.latitude;
+            inputLon.value = koordinatPengguna.longitude;
+            inputTipe.value = 'keluar';
+            inputFoto.value = fotoBase64;
+            const formData = new FormData(formAbsensi);
+            try {
+                const response = await fetch('proses_absensi.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    // Tampilkan modal konfirmasi lembur
+                    document.getElementById('modal-lembur').style.display = 'flex';
+                    // Simpan absen_id jika ada
+                    let absenId = result.absen_id ? result.absen_id : '';
+                    // Handler tombol modal
+                    document.getElementById('btn-lembur-ya').onclick = function() {
+                        if (absenId) {
+                            window.location.href = 'konfirmasi_lembur.php?absen_id=' + encodeURIComponent(absenId);
+                        } else {
+                            window.location.href = 'konfirmasi_lembur.php';
+                        }
+                    };
+                    document.getElementById('btn-lembur-tidak').onclick = function() {
+                        window.location.href = 'absen.php';
+                    };
+                    btnAbsenKeluar.innerHTML = 'Absen Keluar';
+                    btnAbsenKeluar.disabled = true;
+                    statusLokasi.textContent = 'Absensi hari ini sudah selesai.';
+                    stopCamera();
+                } else if (result.status === 'error' && (result.message === 'Not logged in' || result.message.toLowerCase().includes('unauthorized'))) {
+                    alert('Sesi Anda telah habis. Silakan login kembali.');
+                    window.location.href = 'index.php?error=notloggedin';
+                } else if (result.next === 'konfirmasi_lembur' && result.absen_id) {
+                    window.location.href = 'konfirmasi_lembur.php?absen_id=' + encodeURIComponent(result.absen_id);
+                    return;
                 } else {
                     alert(result.message || 'Terjadi error.');
                     window.location.reload();
@@ -182,16 +235,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- Fitur: Ubah tombol otomatis setelah absen masuk tanpa reload ---
     window.ubahTombolAbsen = function(tipe) {
-        if (!btnAbsen) return;
+        if (!btnAbsenMasuk && !btnAbsenKeluar) return;
         if (tipe === 'keluar') {
-            btnAbsen.setAttribute('data-tipe', 'keluar');
-            btnAbsen.textContent = 'Absen Keluar';
-            btnAbsen.disabled = false;
-            // Kamera tidak perlu diaktifkan lagi
+            btnAbsenKeluar.setAttribute('data-tipe', 'keluar');
+            btnAbsenKeluar.textContent = 'Absen Keluar';
+            btnAbsenKeluar.disabled = false;
+            // startCamera(); // Jangan reset kamera agar tidak gelap
         } else if (tipe === 'done') {
-            btnAbsen.setAttribute('data-tipe', 'done');
-            btnAbsen.textContent = 'Absensi Selesai';
-            btnAbsen.disabled = true;
+            btnAbsenMasuk.setAttribute('data-tipe', 'done');
+            btnAbsenMasuk.textContent = 'Absensi Selesai';
+            btnAbsenMasuk.disabled = true;
+            stopCamera();
         }
     }
 

@@ -81,7 +81,12 @@ if ($user_role == 'admin') {
                                 <?php endif; ?>
                                 <td>
                                     <?php if (!empty($absen['foto_absen'])): 
-                                    $path_foto = 'uploads/' . htmlspecialchars($absen['foto_absen']); 
+                                    $foto = htmlspecialchars($absen['foto_absen']);
+                                    if (strpos($foto, 'absen_keluar_') === 0) {
+                                        $path_foto = 'uploads/absen_keluar/' . $foto;
+                                    } else {
+                                        $path_foto = 'uploads/absen_masuk/' . $foto;
+                                    }
                                     if (file_exists($path_foto)): // Cek apakah file benar-benar ada
                                     ?>
                                         <img src="<?php echo $path_foto; ?>" alt="Foto Absen" class="foto-absen" style="max-width: 50px; height: auto;"> <?php else: ?>

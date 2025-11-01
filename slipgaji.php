@@ -284,7 +284,7 @@ $riwayat_gaji = $stmt_riwayat->fetchAll(PDO::FETCH_ASSOC);
                                 <td><?php echo $riwayat['jumlah_terlambat']; ?></td>
                                 <td><?php echo $riwayat['jumlah_absen']; ?></td>
                                 <td>
-                                    <a href="generate_slip.php?id=<?php echo $riwayat['id']; ?>" class="btn-apply" style="font-size: 0.9em; padding: 5px 10px; text-decoration: none;">
+                                    <a href="uploads/slip_gaji/Slip_Gaji_<?php echo preg_replace('/[^A-Za-z0-9_\-]/', '', $riwayat['nama_lengkap']); ?>_<?php echo getNamaBulan($riwayat['periode_bulan']) . '_' . $riwayat['periode_tahun'] . '_' . $riwayat['id']; ?>.docx" class="btn-apply" style="font-size: 0.9em; padding: 5px 10px; text-decoration: none;">
                                         Download (.docx)
                                     </a>
                                 </td>
