@@ -2,7 +2,8 @@
 // absen_helper.php
 function getAbsenStatusToday($pdo, $user_id) {
     $today = date('Y-m-d');
-    $sql = "SELECT waktu_masuk, waktu_keluar FROM absensi WHERE user_id = ? AND DATE(tanggal_absensi) = ? LIMIT 1";
+    // NONAKTIF SEMENTARA: Ambil status absen pertama saja (boleh absen ulang)
+    $sql = "SELECT waktu_masuk, waktu_keluar FROM absensi WHERE user_id = ? AND DATE(tanggal_absensi) = ? ORDER BY id ASC LIMIT 1";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$user_id, $today]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);

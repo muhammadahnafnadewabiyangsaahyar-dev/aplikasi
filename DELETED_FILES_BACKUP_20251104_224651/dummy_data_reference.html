@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dummy Data - Quick Reference</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #667eea;
+            margin: 0 0 10px 0;
+        }
+        .subtitle {
+            color: #666;
+            margin: 0 0 30px 0;
+        }
+        .section {
+            margin: 30px 0;
+        }
+        .section h2 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin: 0 0 15px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        table th {
+            background: #f5f5f5;
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+            font-weight: 600;
+        }
+        table td {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+        }
+        table tr:hover {
+            background: #f9f9f9;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-admin {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        .badge-user {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+        .command {
+            background: #2d2d2d;
+            color: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .alert-warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            color: #856404;
+        }
+        .alert-success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            color: #155724;
+        }
+        .alert-info {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            color: #0c5460;
+        }
+        .quick-test {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+        .quick-test ol {
+            margin: 10px 0;
+            padding-left: 25px;
+        }
+        .quick-test li {
+            margin: 8px 0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #5568d3;
+        }
+        .btn-danger {
+            background: #dc3545;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 Dummy Data - Quick Reference</h1>
+        <p class="subtitle">Data testing untuk sistem absensi & shift management</p>
+
+        <!-- Alert -->
+        <div class="alert alert-warning">
+            <strong>⚠️ WARNING:</strong> Hanya untuk development/testing! Jangan gunakan di production!
+        </div>
+
+        <!-- Install Instructions -->
+        <div class="section">
+            <h2>📥 Install Dummy Data</h2>
+            
+            <p><strong>Via Script (Recommended):</strong></p>
+            <div class="command">
+                $ cd /Applications/XAMPP/xamppfiles/htdocs/aplikasi/<br>
+                $ ./install_dummy_data.sh
+            </div>
+
+            <p><strong>Via MySQL Manual:</strong></p>
+            <div class="command">
+                $ mysql -u root aplikasi < dummy_data_complete.sql
+            </div>
+
+            <div class="alert alert-info">
+                <strong>💡 TIP:</strong> Script install otomatis membuat backup database sebelum import!
+            </div>
+        </div>
+
+        <!-- Login Credentials -->
+        <div class="section">
+            <h2>🔐 Login Credentials</h2>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Password</th>
+                        <th>Role</th>
+                        <th>Nama</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>superadmin</strong></td>
+                        <td>password</td>
+                        <td><span class="badge badge-admin">ADMIN</span></td>
+                        <td>Super Admin</td>
+                    </tr>
+                    <tr>
+                        <td>admin1</td>
+                        <td>password</td>
+                        <td><span class="badge badge-admin">ADMIN</span></td>
+                        <td>Admin Jakarta</td>
+                    </tr>
+                    <tr>
+                        <td>admin2</td>
+                        <td>password</td>
+                        <td><span class="badge badge-admin">ADMIN</span></td>
+                        <td>Admin Bandung</td>
+                    </tr>
+                    <tr>
+                        <td>hradmin</td>
+                        <td>password</td>
+                        <td><span class="badge badge-admin">ADMIN</span></td>
+                        <td>HR Manager</td>
+                    </tr>
+                    <tr>
+                        <td><strong>pegawai1</strong></td>
+                        <td>password</td>
+                        <td><span class="badge badge-user">USER</span></td>
+                        <td>Budi Santoso (Kasir)</td>
+                    </tr>
+                    <tr>
+                        <td>pegawai2</td>
+                        <td>password</td>
+                        <td><span class="badge badge-user">USER</span></td>
+                        <td>Siti Nurhaliza (SPG)</td>
+                    </tr>
+                    <tr>
+                        <td>pegawai3</td>
+                        <td>password</td>
+                        <td><span class="badge badge-user">USER</span></td>
+                        <td>Ahmad Rifai (Kasir)</td>
+                    </tr>
+                    <tr>
+                        <td>pegawai4</td>
+                        <td>password</td>
+                        <td><span class="badge badge-user">USER</span></td>
+                        <td>Dewi Lestari (SPG)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="alert alert-success">
+                <strong>✅ Quick Login:</strong> Username: <code>superadmin</code> | Password: <code>password</code>
+            </div>
+        </div>
+
+        <!-- Data Summary -->
+        <div class="section">
+            <h2>📊 Data Summary</h2>
+            
+            <table>
+                <tr>
+                    <th>Data Type</th>
+                    <th>Jumlah</th>
+                    <th>Keterangan</th>
+                </tr>
+                <tr>
+                    <td>Admin Users</td>
+                    <td><strong>5</strong></td>
+                    <td>superadmin, admin1-3, hradmin</td>
+                </tr>
+                <tr>
+                    <td>Pegawai Users</td>
+                    <td><strong>8</strong></td>
+                    <td>pegawai1-8 (berbagai posisi)</td>
+                </tr>
+                <tr>
+                    <td>Cabang</td>
+                    <td><strong>3</strong></td>
+                    <td>Citraland Gowa, Adhyaksa, BTP</td>
+                </tr>
+                <tr>
+                    <td>Shift Assignments</td>
+                    <td><strong>24</strong></td>
+                    <td>Untuk tanggal 5-10 November 2025</td>
+                </tr>
+                <tr>
+                    <td>Absensi Records</td>
+                    <td><strong>12</strong></td>
+                    <td>Masuk + keluar (ada yang terlambat)</td>
+                </tr>
+                <tr>
+                    <td>Whitelist (Gaji)</td>
+                    <td><strong>8</strong></td>
+                    <td>Komponen gaji lengkap</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Quick Test -->
+        <div class="section">
+            <h2>🧪 Quick Test (5 Menit)</h2>
+            
+            <div class="quick-test">
+                <h3>Test Shift Calendar:</h3>
+                <ol>
+                    <li>Login sebagai <code>superadmin</code> dengan password <code>password</code></li>
+                    <li>Klik menu <strong>📅 Shift Management</strong></li>
+                    <li>Pilih cabang <strong>"Citraland Gowa"</strong> dari dropdown</li>
+                    <li>Lihat pegawai muncul di rows (Budi, Siti, Gunawan)</li>
+                    <li>Lihat shift assignments yang sudah ada (tanggal 5-10 Nov)</li>
+                    <li>Coba drag shift atau buat assignment baru</li>
+                    <li>Switch ke <strong>📋 Table View</strong></li>
+                    <li>Lihat tabel assignment lengkap</li>
+                </ol>
+
+                <h3>Test Dashboard User:</h3>
+                <ol>
+                    <li>Logout, login sebagai <code>pegawai1</code></li>
+                    <li>Lihat dashboard dengan data absensi</li>
+                    <li>Cek statistik kehadiran (ada data 5-6 November)</li>
+                    <li>Lihat riwayat absensi</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Sample Scenarios -->
+        <div class="section">
+            <h2>📝 Sample Test Scenarios</h2>
+            
+            <h3>Scenario 1: Tepat Waktu</h3>
+            <p><strong>Pegawai:</strong> pegawai1 (Budi Santoso)<br>
+            <strong>Tanggal:</strong> 5 November 2025<br>
+            <strong>Jam Masuk:</strong> 07:00 (tepat waktu)<br>
+            <strong>Jam Keluar:</strong> 15:05<br>
+            <strong>Status:</strong> Hadir ✅</p>
+
+            <h3>Scenario 2: Terlambat</h3>
+            <p><strong>Pegawai:</strong> pegawai2 (Siti Nurhaliza)<br>
+            <strong>Tanggal:</strong> 6 November 2025<br>
+            <strong>Jam Masuk:</strong> 07:30 (terlambat 30 menit) ⏰<br>
+            <strong>Jam Keluar:</strong> 15:35<br>
+            <strong>Status:</strong> Hadir (Terlambat)</p>
+
+            <h3>Scenario 3: Lupa Absen Pulang</h3>
+            <p><strong>Pegawai:</strong> pegawai4 (Dewi Lestari)<br>
+            <strong>Tanggal:</strong> 6 November 2025<br>
+            <strong>Jam Masuk:</strong> 07:00<br>
+            <strong>Jam Keluar:</strong> NULL<br>
+            <strong>Status:</strong> Lupa Absen Pulang 🏠</p>
+
+            <h3>Scenario 4: Lembur</h3>
+            <p><strong>Pegawai:</strong> pegawai6 (Fitri Handayani)<br>
+            <strong>Tanggal:</strong> 6 November 2025<br>
+            <strong>Jam Masuk:</strong> 08:00<br>
+            <strong>Jam Keluar:</strong> 16:00 (1 jam lembur)<br>
+            <strong>Status:</strong> Hadir + Lembur 🌙</p>
+        </div>
+
+        <!-- Uninstall -->
+        <div class="section">
+            <h2>🗑️ Uninstall Dummy Data</h2>
+            
+            <p>Untuk menghapus semua dummy data:</p>
+            <div class="command">
+                $ ./uninstall_dummy_data.sh
+            </div>
+
+            <div class="alert alert-warning">
+                <strong>⚠️ PERHATIAN:</strong> Script ini akan menghapus SEMUA data yang dibuat oleh dummy import, termasuk shift assignments dan absensi!
+            </div>
+        </div>
+
+        <!-- Links -->
+        <div class="section">
+            <h2>📚 Documentation</h2>
+            <a href="DUMMY_USERS_INFO.md" class="btn">📄 Dummy Users Info</a>
+            <a href="SHIFT_CALENDAR_GUIDE.md" class="btn">📅 Shift Calendar Guide</a>
+            <a href="QUICK_TEST.md" class="btn">🧪 Quick Test Guide</a>
+            <a href="uninstall_dummy_data.sh" class="btn btn-danger">🗑️ Uninstall Script</a>
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; color: #666;">
+            <p><strong>Created:</strong> November 4, 2025 | <strong>Version:</strong> 1.0</p>
+            <p>⚠️ For development/testing only!</p>
+        </div>
+    </div>
+</body>
+</html>

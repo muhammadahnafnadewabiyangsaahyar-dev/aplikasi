@@ -111,6 +111,29 @@ $stmt_insert->execute([
 ]);
 
 if ($stmt_insert) {
+    // 14. Kirim Email Notifikasi ke HR dan Kepala Toko
+    require_once __DIR__ . '/email_helper.php';
+    
+    $pengajuan_id = $pdo->lastInsertId();
+    
+    $izin_data = [
+        'id' => $pengajuan_id,
+        'tanggal_mulai' => $tanggal_mulai_form,
+        'tanggal_selesai' => $tanggal_selesai_form,
+        'durasi_hari' => $lama_izin_form,
+        'alasan' => $alasan_form,
+        'jenis_izin' => $perihal_form
+    ];
+    
+    // Kirim email notification
+    $email_sent = sendEmailIzinBaru($izin_data, $user_data, $pdo);
+    
+    if ($email_sent) {
+        error_log("✅ Email notifikasi izin #{$pengajuan_id} berhasil dikirim");
+    } else {
+        error_log("⚠️ Email notifikasi izin #{$pengajuan_id} gagal dikirim (izin tetap tersimpan)");
+    }
+    
     header('Location: mainpage.php?status=sukses');
     exit;
 } else {

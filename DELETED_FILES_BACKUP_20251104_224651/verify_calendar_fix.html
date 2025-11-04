@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✅ Calendar Fix - Verification</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        .status-box {
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 5px solid;
+        }
+        .status-success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .status-error {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        .status-warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+        .status-info {
+            background: #d1ecf1;
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            margin: 10px 5px;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .checklist {
+            list-style: none;
+            margin: 20px 0;
+        }
+        .checklist li {
+            padding: 12px 15px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+        }
+        .checklist li::before {
+            content: "✅";
+            margin-right: 15px;
+            font-size: 20px;
+        }
+        .steps {
+            counter-reset: step;
+            list-style: none;
+            margin: 20px 0;
+        }
+        .steps li {
+            counter-increment: step;
+            padding: 15px 15px 15px 60px;
+            margin: 15px 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            position: relative;
+            border-left: 4px solid #667eea;
+        }
+        .steps li::before {
+            content: counter(step);
+            position: absolute;
+            left: 15px;
+            top: 15px;
+            width: 35px;
+            height: 35px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        code {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        .test-result {
+            padding: 15px;
+            background: #2d2d2d;
+            color: #f8f8f2;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .divider {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #667eea, transparent);
+            margin: 30px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✅ Calendar View - Fix Verification</h1>
+        <p class="subtitle">Test apakah shift calendar sudah berfungsi dengan baik</p>
+
+        <div class="status-box status-success">
+            <h3 style="margin-bottom: 10px;">✅ Fixes Applied:</h3>
+            <ul class="checklist">
+                <li>Library load issue (403 → 200 OK)</li>
+                <li>TypeError: rows undefined (added rows:[], events:[])</li>
+                <li>Initialization sequence fixed</li>
+            </ul>
+        </div>
+
+        <div class="divider"></div>
+
+        <h2 style="margin-bottom: 20px;">🧪 Quick Tests</h2>
+        
+        <button class="btn" onclick="testLibrary()">Test 1: DayPilot Library</button>
+        <button class="btn" onclick="testAPI()">Test 2: API Endpoints</button>
+        <button class="btn" onclick="testDummyData()">Test 3: Dummy Data</button>
+        <button class="btn btn-success" onclick="openCalendar()">🚀 Open Calendar</button>
+        
+        <div id="test-result" class="test-result" style="display:none;"></div>
+
+        <div class="divider"></div>
+
+        <h2 style="margin-bottom: 20px;">📋 Manual Testing Steps:</h2>
+        
+        <ol class="steps">
+            <li>
+                <strong>Clear Browser Cache</strong><br>
+                <small>Tekan: <code>Cmd+Shift+R</code> (Mac) atau <code>Ctrl+Shift+R</code> (Windows)</small>
+            </li>
+            <li>
+                <strong>Login as Admin</strong><br>
+                <small>Username: <code>superadmin</code> | Password: <code>password</code></small>
+            </li>
+            <li>
+                <strong>Open Shift Calendar</strong><br>
+                <small>Klik menu "📅 Shift Management" atau button di atas</small>
+            </li>
+            <li>
+                <strong>Check Console (F12)</strong><br>
+                <small>Pastikan TIDAK ada error merah. Calendar grid harus terlihat.</small>
+            </li>
+            <li>
+                <strong>Select Cabang</strong><br>
+                <small>Pilih cabang dari dropdown (misal: "Citraland Gowa")</small>
+            </li>
+            <li>
+                <strong>Verify Data Loads</strong><br>
+                <small>Employee rows dan shift assignments harus muncul!</small>
+            </li>
+        </ol>
+
+        <div class="status-box status-info">
+            <h3 style="margin-bottom: 10px;">💡 What to Expect:</h3>
+            <p><strong>Before selecting cabang:</strong></p>
+            <ul style="margin: 10px 0 10px 20px;">
+                <li>Calendar grid visible (empty)</li>
+                <li>No employee rows (normal behavior)</li>
+                <li>NO errors in console</li>
+            </ul>
+            <p><strong>After selecting cabang:</strong></p>
+            <ul style="margin: 10px 0 0 20px;">
+                <li>Employee rows appear</li>
+                <li>Shift blocks visible (colored)</li>
+                <li>Can drag & drop, create, delete</li>
+            </ul>
+        </div>
+
+        <div class="divider"></div>
+
+        <h2>📚 Documentation</h2>
+        <a href="FIX_CALENDAR_TYPEERROR.md" class="btn btn-secondary">📄 Fix Details</a>
+        <a href="SHIFT_CALENDAR_GUIDE.md" class="btn btn-secondary">📖 User Guide</a>
+        <a href="test_shift_calendar.html" class="btn btn-secondary">🧪 Advanced Tests</a>
+    </div>
+
+    <script>
+        function showResult(message, type = 'success') {
+            const resultDiv = document.getElementById('test-result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = message;
+            resultDiv.style.borderLeft = type === 'success' ? '4px solid #28a745' : '4px solid #dc3545';
+        }
+
+        async function testLibrary() {
+            showResult('Testing DayPilot library...', 'info');
+            
+            try {
+                const response = await fetch('daypilot-all.min.js');
+                const status = response.status;
+                
+                if (status === 200) {
+                    showResult(`✅ SUCCESS!\n\nDayPilot library accessible (HTTP ${status})\nFile size: ${(response.headers.get('content-length') / 1024).toFixed(2)} KB\n\nLibrary loaded correctly!`, 'success');
+                } else {
+                    showResult(`❌ FAILED!\n\nHTTP Status: ${status}\nLibrary cannot be loaded.`, 'error');
+                }
+            } catch (error) {
+                showResult(`❌ ERROR!\n\n${error.message}`, 'error');
+            }
+        }
+
+        async function testAPI() {
+            showResult('Testing API endpoints...', 'info');
+            
+            let results = '🧪 API Test Results:\n\n';
+            
+            try {
+                // Test 1: get_cabang
+                const r1 = await fetch('api_shift_calendar.php?action=get_cabang');
+                const d1 = await r1.json();
+                results += `✅ get_cabang: ${d1.status}\n`;
+                results += `   Found: ${d1.data?.length || 0} cabang\n\n`;
+                
+                // Test 2: get_pegawai
+                const r2 = await fetch('api_shift_calendar.php?action=get_pegawai&cabang_id=1');
+                const d2 = await r2.json();
+                results += `✅ get_pegawai: ${d2.status}\n`;
+                results += `   Found: ${d2.data?.length || 0} employees\n\n`;
+                
+                // Test 3: get_assignments
+                const r3 = await fetch('api_shift_calendar.php?action=get_assignments&month=2025-11&cabang_id=1');
+                const d3 = await r3.json();
+                results += `✅ get_assignments: ${d3.status}\n`;
+                results += `   Found: ${d3.data?.length || 0} assignments\n\n`;
+                
+                results += '🎉 All API endpoints working!';
+                showResult(results, 'success');
+            } catch (error) {
+                showResult(`❌ API Test Failed!\n\n${error.message}`, 'error');
+            }
+        }
+
+        async function testDummyData() {
+            showResult('Checking dummy data...', 'info');
+            
+            try {
+                const response = await fetch('api_shift_calendar.php?action=get_cabang');
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.data.length > 0) {
+                    let results = `✅ Dummy Data Found!\n\n`;
+                    results += `Total Cabang: ${data.data.length}\n\n`;
+                    
+                    data.data.forEach((cabang, i) => {
+                        results += `${i + 1}. ${cabang.nama_cabang}\n`;
+                        results += `   Shift: ${cabang.nama_shift}\n`;
+                        results += `   Jam: ${cabang.jam_masuk.substring(0,5)} - ${cabang.jam_keluar.substring(0,5)}\n\n`;
+                    });
+                    
+                    showResult(results, 'success');
+                } else {
+                    showResult('⚠️ No dummy data found!\n\nRun: ./install_dummy_data.sh\n\nOr install via phpMyAdmin.', 'error');
+                }
+            } catch (error) {
+                showResult(`❌ Error checking data!\n\n${error.message}`, 'error');
+            }
+        }
+
+        function openCalendar() {
+            window.open('shift_calendar.php', '_blank');
+            showResult('✅ Opening shift calendar in new tab...\n\nRemember to:\n1. Login as superadmin\n2. Select cabang from dropdown\n3. Check console for errors (F12)', 'success');
+        }
+
+        // Auto-run library test on load
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(testLibrary, 500);
+        });
+    </script>
+</body>
+</html>

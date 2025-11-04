@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Custom Calendar Integration</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { 
+            background: #f9f9f9; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+            border-left: 4px solid #2196f3;
+        }
+        .status { font-weight: bold; }
+        .success { color: green; }
+        .error { color: red; }
+        .loading { color: orange; }
+        button { 
+            padding: 8px 15px; 
+            margin: 5px; 
+            border: none; 
+            background: #2196f3; 
+            color: white; 
+            cursor: pointer; 
+            border-radius: 3px;
+        }
+        button:hover { background: #1976d2; }
+        pre { 
+            background: #f5f5f5; 
+            padding: 10px; 
+            border-radius: 3px; 
+            overflow-x: auto; 
+            max-height: 200px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Custom Calendar Integration</h1>
+    
+    <div class="test-section">
+        <h3>1. Test API Endpoints</h3>
+        <button onclick="testAPI('get_cabang')">Test Get Cabang</button>
+        <button onclick="testAPI('get_users', '1')">Test Get Users (Cabang 1)</button>
+        <button onclick="testAPI('get_shifts', '1', '11', '2025')">Test Get Shifts (Nov 2025)</button>
+        <div id="api-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. Test Database Connection</h3>
+        <button onclick="testConnection()">Test Connection</button>
+        <div id="connection-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Test Shift Assignment</h3>
+        <button onclick="testShiftSave()">Test Save Shift</button>
+        <div id="shift-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>4. Open Calendar</h3>
+        <button onclick="openCalendar()">Open Custom Calendar</button>
+        <button onclick="openOriginalShiftCalendar()">Open Original Shift Calendar (DayPilot)</button>
+    </div>
+
+    <script>
+        async function testAPI(action, ...params) {
+            const resultDiv = document.getElementById('api-results');
+            
+            try {
+                resultDiv.innerHTML = '<div class="status loading">Testing API endpoint...</div>';
+                
+                let url = `api_kalender.php?action=${action}`;
+                if (action === 'get_users' && params[0]) {
+                    url += `&cabang_id=${params[0]}`;
+                }
+                if (action === 'get_shifts' && params.length >= 3) {
+                    url += `&cabang_id=${params[0]}&month=${params[1]}&year=${params[2]}`;
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <div class="status success">✅ API Response (${response.status}):</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="status error">❌ API Error:</div>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+        
+        async function testConnection() {
+            const resultDiv = document.getElementById('connection-results');
+            
+            try {
+                resultDiv.innerHTML = '<div class="status loading">Testing database connection...</div>';
+                
+                const response = await fetch('../connect.php');
+                const text = await response.text();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="status success">✅ Database connection available</div>
+                        <div>Response: ${response.status}</div>
+                    `;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="status error">❌ Connection Error:</div>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+        
+        async function testShiftSave() {
+            const resultDiv = document.getElementById('shift-results');
+            
+            try {
+                resultDiv.innerHTML = '<div class="status loading">Testing shift save...</div>';
+                
+                const testData = {
+                    user_id: 1, // Assuming user ID 1 exists
+                    date: '2025-11-10',
+                    shift_type: 'pagi'
+                };
+                
+                const response = await fetch('api_kalender.php?action=save_shift', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.innerHTML = `
+                        <div class="status success">✅ Shift save test successful:</div>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="status error">❌ Shift save failed:</div>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="status error">❌ Test Error:</div>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+        
+        function openCalendar() {
+            window.open('kalender.html', '_blank');
+        }
+        
+        function openOriginalShiftCalendar() {
+            window.open('../shift_calendar.php', '_blank');
+        }
+    </script>
+</body>
+</html>

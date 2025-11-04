@@ -1,6 +1,13 @@
 <?php
+// Mulai output buffering untuk mencegah output yang tidak diinginkan
+ob_start();
+
 session_start();
 include 'connect.php'; // Pastikan nama file koneksi Anda benar
+
+// Define flag untuk prevent CLI code execution di helper file
+define('INCLUDED_FROM_WEB', true);
+include 'calculate_status_kehadiran.php'; // Helper untuk hitung status kehadiran
 
 // 1. Cek Login
 if (!isset($_SESSION['user_id'])) {
@@ -15,18 +22,23 @@ $nama_pengguna = $_SESSION['nama_lengkap'] ?? $_SESSION['username'];
 $daftar_absensi = [];
 $sql = ""; // Inisialisasi string SQL
 
-// 3. Tentukan Kueri Berdasarkan Peran
-if ($user_role == 'admin') {
-    // Admin: Ambil semua data absensi + nama pengguna
-    $sql = "SELECT a.*, r.nama_lengkap FROM absensi a JOIN register r ON a.user_id = r.id ORDER BY a.tanggal_absensi DESC, a.waktu_masuk DESC";
-    $stmt = $pdo->query($sql);
-    $daftar_absensi = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} else {
-    // User Biasa: Ambil hanya data absensi milik sendiri (Gunakan Prepared Statement)
-    $sql = "SELECT * FROM absensi WHERE user_id = ? ORDER BY tanggal_absensi DESC, waktu_masuk DESC";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([$user_id]);
-    $daftar_absensi = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// 3. Query data absensi dengan JOIN ke cabang untuk mendapatkan jam shift
+// Asumsi: Semua user menggunakan cabang dengan id = 1 (sesuaikan jika berbeda)
+$sql = "SELECT 
+            a.*,
+            c.jam_masuk,
+            c.jam_keluar
+        FROM absensi a
+        LEFT JOIN cabang c ON c.id = 1
+        WHERE a.user_id = ? 
+        ORDER BY a.tanggal_absensi DESC, a.waktu_masuk DESC";
+$stmt = $pdo->prepare($sql);
+$stmt->execute([$user_id]);
+$daftar_absensi = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// 4. Hitung status kehadiran untuk setiap record (real-time calculation)
+foreach ($daftar_absensi as &$absen) {
+    $absen['status_kehadiran_calculated'] = hitungStatusKehadiran($absen, $pdo);
 }
 // Tidak perlu tutup $pdo di sini
 ?>
@@ -50,50 +62,203 @@ if ($user_role == 'admin') {
         <table class="rekap-table">
             <thead>
                 <tr>
-                    <?php if ($user_role == 'admin'): ?>
-                        <th>Nama Pengguna</th>
-                    <?php endif; ?>
                     <th>Tanggal Absensi</th>
                     <th>Waktu Masuk</th>
                     <th>Waktu Keluar</th>
                     <th>Status Lokasi</th>
                     <th>Foto Absen</th>
+                    <th>Status Keterlambatan</th>
+                    <th>Potongan Tunjangan</th>
+                    <th>Status Kehadiran</th>
+                    <th>Status Overwork</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($daftar_absensi)): ?>
                     <tr>
-                        <td colspan="<?php echo ($user_role == 'admin') ? '6' : '5'; ?>">Tidak ada data absensi.</td>
+                        <td colspan="9">Tidak ada data absensi.</td>
                     </tr>
                 <?php else: ?>
                     <?php foreach ($daftar_absensi as $absen): ?>
                         <tr>
-                            <?php if ($user_role == 'admin'): ?>
-                                <td><?php echo htmlspecialchars($absen['nama_lengkap']); ?></td>
-                            <?php endif; ?>
                             <td><?php echo htmlspecialchars($absen['tanggal_absensi']); ?></td>
-                            <td><?php echo htmlspecialchars($absen['waktu_masuk']); ?></td>
-                            <td><?php echo htmlspecialchars($absen['waktu_keluar'] ?? '-'); ?></td>
+                            <td><?php echo htmlspecialchars(date('H:i', strtotime($absen['waktu_masuk']))); ?></td>
+                            <td><?php echo htmlspecialchars($absen['waktu_keluar'] ? date('H:i', strtotime($absen['waktu_keluar'])) : '-'); ?></td>
                             <td><?php echo htmlspecialchars($absen['status_lokasi']); ?></td>
                             <td>
-                                <?php if (!empty($absen['foto_absen'])): ?>
-                                    <img src="data:image/jpeg;base64,<?php echo base64_encode($absen['foto_absen']); ?>" alt="Foto Absen" class="foto-absen">
-                                <?php endif; ?>
-                                <td>
-                                    <?php if (!empty($absen['foto_absen'])): 
-                                    $foto = htmlspecialchars($absen['foto_absen']);
-                                    if (strpos($foto, 'absen_keluar_') === 0) {
-                                        $path_foto = 'uploads/absen_keluar/' . $foto;
+                                <?php
+                                $foto = htmlspecialchars($absen['foto_absen']);
+                                $path_foto = '';
+                                if (!empty($foto)) {
+                                    // FIX: Semua foto sekarang di uploads/absensi/
+                                    $path_foto = 'uploads/absensi/' . $foto;
+                                    if (file_exists($path_foto)) {
+                                        echo '<img src="' . $path_foto . '" alt="Foto Absen Masuk" class="foto-absen" style="max-width: 50px; height: auto;">';
                                     } else {
-                                        $path_foto = 'uploads/absen_masuk/' . $foto;
+                                        echo '(File tidak ditemukan)';
                                     }
-                                    if (file_exists($path_foto)): // Cek apakah file benar-benar ada
-                                    ?>
-                                        <img src="<?php echo $path_foto; ?>" alt="Foto Absen" class="foto-absen" style="max-width: 50px; height: auto;"> <?php else: ?>
-                                        (File tidak ditemukan)
-                                    <?php endif; ?>
-                                    <?php endif; ?>
-                                </td>
+                                } else {
+                                    echo '(Tidak ada foto)';
+                                }
+                                ?>
+                            </td>
+                            <td>
+                                <?php
+                                // Status Keterlambatan dengan detail dan warna
+                                $menit_terlambat = isset($absen['menit_terlambat']) ? (int)$absen['menit_terlambat'] : 0;
+                                $status_ket = $absen['status_keterlambatan'] ?? 'tepat waktu';
+                                
+                                if ($status_ket == 'di luar shift') {
+                                    // Absen di luar range shift
+                                    echo '<span style="color: purple; font-weight: bold;">⚠ DI LUAR SHIFT</span><br>';
+                                    echo '<small style="color: gray;">(Absen ' . abs($menit_terlambat) . ' menit dari jam shift)</small><br>';
+                                    echo '<small style="color: red;">Silakan hubungi admin untuk klarifikasi</small>';
+                                } elseif ($menit_terlambat == 0 || $status_ket == 'tepat waktu') {
+                                    echo '<span style="color: green; font-weight: bold;">✓ Tepat Waktu</span>';
+                                } elseif ($menit_terlambat > 0 && $menit_terlambat < 20) {
+                                    // Level 1: Terlambat tapi tidak ada hukuman
+                                    $jam = floor($menit_terlambat / 60);
+                                    $menit = $menit_terlambat % 60;
+                                    $format = ($jam > 0) ? $jam . ' jam ' . $menit . ' menit' : $menit . ' menit';
+                                    echo '<span style="color: orange; font-weight: bold;">⚠ Terlambat ' . $format . '</span><br>';
+                                    echo '<small style="color: gray;">(Tidak ada hukuman)</small>';
+                                } elseif ($menit_terlambat >= 20 && $menit_terlambat < 40) {
+                                    // Level 2: Terlambat 20-39 menit
+                                    $jam = floor($menit_terlambat / 60);
+                                    $menit = $menit_terlambat % 60;
+                                    $format = ($jam > 0) ? $jam . ' jam ' . $menit . ' menit' : $menit . ' menit';
+                                    echo '<span style="color: #FF6B35; font-weight: bold;">⚠ Terlambat ' . $format . '</span>';
+                                } else {
+                                    // Level 3: Terlambat 40+ menit
+                                    $jam = floor($menit_terlambat / 60);
+                                    $menit = $menit_terlambat % 60;
+                                    $format = ($jam > 0) ? $jam . ' jam ' . $menit . ' menit' : $menit . ' menit';
+                                    echo '<span style="color: red; font-weight: bold;">✗ Terlambat ' . $format . '</span>';
+                                }
+                                ?>
+                            </td>
+                            <td>
+                                <?php
+                                // Potongan Tunjangan
+                                $potongan = $absen['potongan_tunjangan'] ?? 'tidak ada';
+                                if ($potongan == 'tidak ada') {
+                                    echo '<span style="color: green;">-</span>';
+                                } elseif ($potongan == 'tunjangan makan') {
+                                    echo '<span style="color: #FF6B35; font-weight: bold;">🍽️ Tunjangan Makan</span>';
+                                } else {
+                                    echo '<span style="color: red; font-weight: bold;">🍽️ Makan<br>🚗 Transport</span>';
+                                }
+                                ?>
+                            </td>
+                            <td>
+                                <?php
+                                // ========================================================
+                                // STATUS KEHADIRAN - Gunakan fungsi helper untuk konsistensi
+                                // ========================================================
+                                $status_kehadiran = $absen['status_kehadiran_calculated'];
+                                
+                                // Cek apakah user ini admin
+                                $is_admin_user = ($user_role === 'admin');
+                                
+                                if ($status_kehadiran == 'Hadir') {
+                                    if ($is_admin_user) {
+                                        // Admin: Tampilkan info durasi kerja dalam format jam menit
+                                        $waktu_masuk = strtotime($absen['waktu_masuk']);
+                                        $waktu_keluar = strtotime($absen['waktu_keluar']);
+                                        $durasi_detik = $waktu_keluar - $waktu_masuk;
+                                        $durasi_jam = floor($durasi_detik / 3600);
+                                        $durasi_menit = floor(($durasi_detik % 3600) / 60);
+                                        
+                                        $format_durasi = '';
+                                        if ($durasi_jam > 0) {
+                                            $format_durasi .= $durasi_jam . ' jam';
+                                        }
+                                        if ($durasi_menit > 0) {
+                                            $format_durasi .= ($durasi_jam > 0 ? ' ' : '') . $durasi_menit . ' menit';
+                                        }
+                                        if (empty($format_durasi)) {
+                                            $format_durasi = '0 menit';
+                                        }
+                                        
+                                        echo '<span style="color: green; font-weight: bold;">✓ Hadir</span><br>';
+                                        echo '<small style="color: green;">(Kerja: ' . $format_durasi . ')</small>';
+                                    } else {
+                                        echo '<span style="color: green; font-weight: bold;">✓ Hadir</span><br>';
+                                        echo '<small style="color: green;">(Memenuhi jam kerja)</small>';
+                                    }
+                                    
+                                } elseif ($status_kehadiran == 'Tidak Hadir') {
+                                    if ($is_admin_user) {
+                                        // Admin: Tampilkan info durasi kerja dalam format jam menit
+                                        $waktu_masuk = strtotime($absen['waktu_masuk']);
+                                        $waktu_keluar = strtotime($absen['waktu_keluar']);
+                                        $durasi_detik = $waktu_keluar - $waktu_masuk;
+                                        $durasi_jam = floor($durasi_detik / 3600);
+                                        $durasi_menit = floor(($durasi_detik % 3600) / 60);
+                                        
+                                        $format_durasi = '';
+                                        if ($durasi_jam > 0) {
+                                            $format_durasi .= $durasi_jam . ' jam';
+                                        }
+                                        if ($durasi_menit > 0) {
+                                            $format_durasi .= ($durasi_jam > 0 ? ' ' : '') . $durasi_menit . ' menit';
+                                        }
+                                        if (empty($format_durasi)) {
+                                            $format_durasi = '0 menit';
+                                        }
+                                        
+                                        echo '<span style="color: red; font-weight: bold;">❌ Belum Memenuhi Kriteria</span><br>';
+                                        echo '<small style="color: red;">(Kerja: ' . $format_durasi . ' - Minimal 8 jam)</small>';
+                                    } else {
+                                        $jam_keluar_shift = $absen['jam_keluar'] ?? null;
+                                        $waktu_keluar_user = $absen['waktu_keluar'] ?? null;
+                                        if (!empty($waktu_keluar_user) && !empty($jam_keluar_shift)) {
+                                            $jam_keluar_only = date('H:i:s', strtotime($waktu_keluar_user));
+                                            $selisih_detik = strtotime($jam_keluar_shift) - strtotime($jam_keluar_only);
+                                            $selisih_jam = floor($selisih_detik / 3600);
+                                            $selisih_menit = floor(($selisih_detik % 3600) / 60);
+                                            
+                                            $format_selisih = '';
+                                            if ($selisih_jam > 0) {
+                                                $format_selisih .= $selisih_jam . ' jam';
+                                            }
+                                            if ($selisih_menit > 0) {
+                                                $format_selisih .= ($selisih_jam > 0 ? ' ' : '') . $selisih_menit . ' menit';
+                                            }
+                                            if (empty($format_selisih)) {
+                                                $format_selisih = '0 menit';
+                                            }
+                                            
+                                            echo '<span style="color: red; font-weight: bold;">❌ Belum Memenuhi Kriteria</span><br>';
+                                            echo '<small style="color: red;">(Pulang ' . $format_selisih . ' lebih awal dari shift)</small>';
+                                        } else {
+                                            echo '<span style="color: red; font-weight: bold;">❌ Belum Memenuhi Kriteria</span>';
+                                        }
+                                    }
+                                    
+                                } elseif ($status_kehadiran == 'Belum Absen Keluar') {
+                                    echo '<span style="color: orange; font-weight: bold;">⚠ Belum Absen Keluar</span><br>';
+                                    echo '<small style="color: gray;">(Status kehadiran pending)</small>';
+                                    
+                                } elseif ($status_kehadiran == 'Lupa Absen Pulang') {
+                                    echo '<span style="color: #ff6b6b; font-weight: bold;"><i class="fa fa-user-clock"></i> Lupa Absen Pulang</span><br>';
+                                    echo '<small style="color: #ff6b6b;">(Dihitung hadir dengan catatan)</small>';
+                                    
+                                } else {
+                                    // Fallback untuk status lain
+                                    echo '<span style="color: gray;">' . htmlspecialchars($status_kehadiran) . '</span>';
+                                }
+                                ?>
+                            </td>
+                            <td>
+                                <?php
+                                // Status Overwork: Berdasarkan status_lembur
+                                if ($absen['status_lembur'] === 'Pending' || $absen['status_lembur'] === 'Approved') {
+                                    echo '<span style="color:orange;font-weight:bold;">Overwork</span>';
+                                } else {
+                                    echo '-';
+                                }
+                                ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -114,3 +279,7 @@ if ($user_role == 'admin') {
     </div>
 </footer>
 </html>
+<?php
+// Flush output buffer dan kirim ke browser
+ob_end_flush();
+// Catatan: Tidak ada closing tag ?> untuk menghindari output tak diinginkan

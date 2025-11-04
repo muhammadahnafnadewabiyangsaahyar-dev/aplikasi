@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Login - Lupa Absen Pulang</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .btn-blue {
+            background: #2196F3;
+        }
+        .btn-blue:hover {
+            background: #0b7dda;
+        }
+        .btn-orange {
+            background: #ff9800;
+        }
+        .btn-orange:hover {
+            background: #e68900;
+        }
+        .step {
+            background: #e3f2fd;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #2196F3;
+            border-radius: 6px;
+        }
+        h1 {
+            color: #333;
+        }
+        h2 {
+            color: #666;
+            margin-top: 0;
+        }
+        .code {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🧪 Test Fitur "Lupa Absen Pulang"</h1>
+        <p>Follow langkah-langkah berikut untuk test fitur warning "Lupa Absen Pulang":</p>
+    </div>
+
+    <div class="card">
+        <h2>📋 Langkah Test:</h2>
+        
+        <div class="step">
+            <strong>Step 1:</strong> Setup Data Test
+            <div class="code">php test_lupa_absen_pulang.php</div>
+            <p>✅ Data test sudah dibuat (absen masuk kemarin tanpa absen keluar)</p>
+        </div>
+
+        <div class="step">
+            <strong>Step 2:</strong> Login sebagai Superadmin
+            <p>
+                <a href="http://localhost/aplikasi/index.php" class="btn btn-blue" target="_blank">
+                    Login Page →
+                </a>
+            </p>
+            <p>Username: <strong>superadmin</strong> / Password: <strong>(your password)</strong></p>
+        </div>
+
+        <div class="step">
+            <strong>Step 3:</strong> Buka Dashboard/Mainpage
+            <p>
+                <a href="http://localhost/aplikasi/mainpage.php" class="btn" target="_blank">
+                    Open Mainpage →
+                </a>
+            </p>
+            <p>Anda akan melihat:</p>
+            <ul>
+                <li>⚠️ <strong>Warning Banner</strong> kuning dengan teks "Anda Lupa Absen Pulang! (1 hari)"</li>
+                <li>📊 <strong>Stat Card</strong> orange/red "Lupa Absen Pulang: 1"</li>
+                <li>📝 Detail tanggal dan jam masuk (tanpa jam keluar)</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <strong>Step 4:</strong> Verifikasi Statistik
+            <p>
+                <a href="http://localhost/aplikasi/rekapabsen.php" class="btn btn-orange" target="_blank">
+                    Open Rekap Absen →
+                </a>
+            </p>
+            <p>Di rekap absen, Anda akan melihat status "Lupa Absen Pulang" pada tanggal yang lupa.</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>🔧 Troubleshooting:</h2>
+        
+        <h3>Jika warning tidak muncul:</h3>
+        <ol>
+            <li><strong>Clear browser cache</strong> - Tekan Cmd+Shift+R</li>
+            <li><strong>Check session</strong> - Pastikan login sebagai superadmin (user_id = 1)</li>
+            <li><strong>Check data</strong> - Jalankan:
+                <div class="code">php debug_mainpage_stats.php</div>
+            </li>
+            <li><strong>Check PHP errors</strong> - Lihat console browser (F12) atau error log</li>
+        </ol>
+
+        <h3>Quick Check Links:</h3>
+        <p>
+            <a href="check_session.php" class="btn" target="_blank">Check Session & Data</a>
+            <a href="debug_mainpage_stats.php" class="btn btn-blue" target="_blank">Debug Statistics</a>
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>📸 Expected Result:</h2>
+        <p>Setelah login, di mainpage.php Anda akan melihat:</p>
+        <pre style="background: #f5f5f5; padding: 15px; border-radius: 6px; overflow-x: auto;">
+┌─────────────────────────────────────────────────────────────────┐
+│ ⚠️ Anda Lupa Absen Pulang! (1 hari)                            │
+│                                                                 │
+│ Berikut adalah hari-hari di mana Anda absen masuk tapi         │
+│ lupa absen pulang. Anda tetap dihitung hadir, tapi dengan      │
+│ catatan "Lupa Absen Pulang".                                   │
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────┐   │
+│ │ 📅 02 Nov 2025 (Sabtu)  🕐 Masuk: 08:00 → Keluar: -    │   │
+│ │                                    [Lupa Absen Pulang]  │   │
+│ └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│ 💡 Tips: Gunakan fitur reminder untuk mengingatkan absen       │
+└─────────────────────────────────────────────────────────────────┘
+
+[Total Kehadiran: 1] [Tepat Waktu: 1] [Terlambat: 0] [Alpha: 25]
+
+┌──────────────────────────────────────┐
+│        Lupa Absen Pulang             │
+│              1                       │
+│  Hari (Dihitung hadir dengan catatan)│
+└──────────────────────────────────────┘
+        </pre>
+    </div>
+
+    <div class="card" style="background: #e8f5e9; border-left: 4px solid #4CAF50;">
+        <h2 style="color: #2e7d32;">✅ Status Test Data</h2>
+        <p>✅ Test data sudah siap (user_id=1, tanggal=2025-11-02, waktu_masuk=08:00, waktu_keluar=NULL)</p>
+        <p>✅ Kode mainpage.php sudah include logic untuk warning banner & stat card</p>
+        <p>✅ Database query sudah benar untuk detect "lupa absen pulang"</p>
+        <p><strong>Tinggal login dan lihat hasilnya! 🚀</strong></p>
+    </div>
+</body>
+</html>

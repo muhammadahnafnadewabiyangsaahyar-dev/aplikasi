@@ -17,10 +17,12 @@ $surat_url = null;
 $absen_url = null;
 $rekapabsen_url = null;
 $slipgaji_url = null;
+$shift_confirmation_url = null;
 $approvesurat_url = null; // Link ini ada di logika PHP Anda tapi tidak dipakai
 $approvelembur_url = null;
 $view_user_url = null;
 $view_absensi_url = null;
+$shift_management_url = null;
 
 // --- 3. Tetapkan URL jika user sudah login ---
 if ($is_logged_in) {
@@ -34,6 +36,7 @@ if ($is_logged_in) {
     $absen_url = 'absen.php';
     $rekapabsen_url = 'rekapabsen.php';
     $slipgaji_url = 'slipgaji.php';
+    $shift_confirmation_url = 'shift_confirmation.php'; // Konfirmasi shift untuk semua user
 
     // --- Link yang HANYA dimiliki ADMIN ---
     if ($_SESSION['role'] == 'admin') {
@@ -42,6 +45,8 @@ if ($is_logged_in) {
         $view_user_url = 'view_user.php';
         $view_absensi_url = 'view_absensi.php';
         $whitelist_url = 'whitelist.php'; // Tambahkan whitelist
+        $shift_management_url = 'shift_management.php'; // Kelola shift untuk admin (table mode)
+        $shift_calendar_url = 'shift_calendar.php'; // Kelola shift dengan calendar view
     }
 }
 ?>
@@ -59,8 +64,12 @@ if ($is_logged_in) {
             <a href="<?php echo $absen_url; ?>" class="absensi">Absensi</a>
             <a href="<?php echo $rekapabsen_url; ?>" class="rekapabsen">Rekap Absensi</a>
             <a href="<?php echo $slipgaji_url; ?>" class="slipgaji">Slip Gaji</a>
+            <a href="<?php echo $shift_confirmation_url; ?>" class="shift-confirmation">Konfirmasi Shift</a>
+            <a href="jadwal_shift.php" class="jadwalshift">Jadwal Shift</a>
 
             <?php if ($_SESSION['role'] == 'admin'): ?>
+                <a href="<?php echo $shift_calendar_url; ?>" class="shift-calendar">📅 Shift Calendar</a>
+                <a href="<?php echo $shift_management_url; ?>" class="shift-management">Kelola Shift</a>
                 <a href="<?php echo $approvesurat_url; ?>" class="surat">Approve Surat</a>
                 <a href="<?php echo $view_user_url; ?>" class="viewusers">Daftar Pengguna</a>
                 <a href="<?php echo $view_absensi_url; ?>" class="viewabsensi">Daftar Absensi</a>

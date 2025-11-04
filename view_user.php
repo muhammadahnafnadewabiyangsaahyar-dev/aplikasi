@@ -2,8 +2,9 @@
 session_start();
 include 'connect.php';
 
-// Keamanan: Pastikan hanya admin yang bisa akses
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
+// Keamanan: Pastikan hanya superadmin, HR, finance, atau owner yang bisa akses
+$allowed_roles = ['superadmin', 'HR', 'finance', 'owner'];
+if (!isset($_SESSION['user_id']) || !in_array(strtolower($_SESSION['posisi'] ?? ''), array_map('strtolower', $allowed_roles))) {
     header('Location: index.php?error=unauthorized');
     exit;
 }
@@ -57,6 +58,7 @@ $home_url = 'mainpageadmin.php';
                         <th>Email</th>
                         <th>Username</th>
                         <th>Role</th>
+                        <th>Aksi</th> <!-- Kolom aksi -->
                     </tr>
                 </thead>
                 <tbody>
@@ -70,6 +72,14 @@ $home_url = 'mainpageadmin.php';
                         <td><?php echo htmlspecialchars($user['email']); ?></td>
                         <td><?php echo htmlspecialchars($user['username']); ?></td>
                         <td><?php echo htmlspecialchars($user['role']); ?></td>
+                        <td>
+                            <a href="edit_user.php?id=<?php echo urlencode($user['id']); ?>" class="btn-edit" title="Edit"><i class="fa fa-edit"></i> Edit</a>
+                            <?php if ($user['id'] != $_SESSION['user_id']): ?>
+                                <a href="delete_user.php?id=<?php echo urlencode($user['id']); ?>" class="btn-delete" title="Hapus" onclick="return confirm('Yakin ingin menghapus pengguna ini?');"><i class="fa fa-trash"></i> Hapus</a>
+                            <?php else: ?>
+                                <span style="color: #aaa; font-size: 0.9em;">(Akun Anda)</span>
+                            <?php endif; ?>
+                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>

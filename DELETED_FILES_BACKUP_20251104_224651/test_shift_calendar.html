@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Calendar View</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 1400px;
+            margin: 0 auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .info {
+            color: #17a2b8;
+        }
+        button {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .step {
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-left: 4px solid #667eea;
+        }
+        .step-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: #667eea;
+            color: white;
+            text-align: center;
+            line-height: 30px;
+            border-radius: 50%;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test Shift Calendar System</h1>
+        
+        <div class="test-section">
+            <h2>📋 Quick Tests</h2>
+            <button onclick="testDatabaseConnection()">1. Test Database Connection</button>
+            <button onclick="testCabangData()">2. Test Cabang Data</button>
+            <button onclick="testEmployeeData()">3. Test Employee Data</button>
+            <button onclick="testShiftAssignments()">4. Test Shift Assignments</button>
+            <button onclick="testAPI()">5. Test API Endpoints</button>
+            <button onclick="openCalendar()">6. Open Calendar Page</button>
+            <div id="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📖 Manual Testing Steps</h2>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Login sebagai Admin</strong>
+                <p>URL: <a href="http://localhost/aplikasi/login.php" target="_blank">http://localhost/aplikasi/login.php</a></p>
+                <p>Username: <code>superadmin</code> atau admin lain dari dummy data</p>
+                <p>Password: <code>password</code></p>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Buka Shift Calendar</strong>
+                <p>Klik menu "📅 Shift Management" atau buka langsung:</p>
+                <p><a href="http://localhost/aplikasi/shift_calendar.php" target="_blank">http://localhost/aplikasi/shift_calendar.php</a></p>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>Pilih Cabang</strong>
+                <p>Di dropdown "Cabang", pilih salah satu cabang (misal: Citraland Gowa)</p>
+                <p>⚠️ <strong>PENTING:</strong> Cabang HARUS dipilih dulu sebelum calendar bisa menampilkan data!</p>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">4</span>
+                <strong>Verifikasi Calendar View</strong>
+                <p>✅ Calendar timeline muncul (hari-hari dalam bulan)</p>
+                <p>✅ Employee rows muncul di sebelah kiri</p>
+                <p>✅ Shift assignments muncul sebagai blok berwarna</p>
+                <p>✅ Legend warna cabang muncul di bawah</p>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">5</span>
+                <strong>Test Interaksi</strong>
+                <p>🖱️ Coba klik & drag pada employee row di tanggal tertentu</p>
+                <p>🖱️ Coba drag shift yang sudah ada</p>
+                <p>🖱️ Coba klik tombol X untuk delete shift</p>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔍 Troubleshooting</h2>
+            
+            <h3>Kalau Calendar Tidak Muncul:</h3>
+            <ol>
+                <li>
+                    <strong>Cek Console Browser (F12)</strong>
+                    <p>Buka Developer Tools → Console tab</p>
+                    <p>Lihat apakah ada error JavaScript</p>
+                    <p class="error">Error umum: "DayPilot is not defined" = library tidak load</p>
+                </li>
+                <li>
+                    <strong>Cek Network Tab</strong>
+                    <p>Buka Developer Tools → Network tab</p>
+                    <p>Reload halaman, cek apakah <code>daypilot-all.min.js</code> load dengan status 200</p>
+                </li>
+                <li>
+                    <strong>Pastikan Login sebagai Admin</strong>
+                    <p class="error">Kalau bukan admin, akan redirect ke login.php</p>
+                </li>
+                <li>
+                    <strong>Pilih Cabang dari Dropdown</strong>
+                    <p class="error">Calendar memang SENGAJA kosong kalau belum pilih cabang!</p>
+                </li>
+            </ol>
+            
+            <h3>Kalau Data Tidak Muncul:</h3>
+            <ol>
+                <li>Install dummy data dulu: <code>./install_dummy_data.sh</code></li>
+                <li>Cek database: Pastikan ada data di tabel <code>cabang</code>, <code>register</code>, <code>shift_assignments</code></li>
+                <li>Test API manual di browser: <code>api_shift_calendar.php?action=get_cabang</code></li>
+            </ol>
+        </div>
+        
+        <div class="test-section">
+            <h2>📸 Expected Visual</h2>
+            <p><strong>Calendar View harus menampilkan:</strong></p>
+            <ul>
+                <li>✅ Header dengan dropdown "Cabang" dan "Bulan"</li>
+                <li>✅ Info box dengan instruksi penggunaan</li>
+                <li>✅ Calendar grid dengan kolom per-hari</li>
+                <li>✅ Rows untuk setiap employee (nama di kiri)</li>
+                <li>✅ Shift blocks berwarna di tanggal tertentu</li>
+                <li>✅ Legend warna di bawah (nama cabang + warna)</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        function showResult(message, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<span class="${type}">${message}</span>`;
+        }
+        
+        async function testDatabaseConnection() {
+            showResult('Testing database connection...', 'info');
+            
+            try {
+                const response = await fetch('api_shift_calendar.php?action=get_cabang');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    showResult(`✅ Database OK! Found ${data.data.length} cabang:\n${JSON.stringify(data.data, null, 2)}`, 'success');
+                } else {
+                    showResult('❌ Database Error: ' + (data.message || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                showResult('❌ Connection Error: ' + error.message, 'error');
+            }
+        }
+        
+        async function testCabangData() {
+            showResult('Fetching cabang data...', 'info');
+            
+            try {
+                const response = await fetch('api_shift_calendar.php?action=get_cabang');
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.data.length > 0) {
+                    let result = `✅ Found ${data.data.length} cabang:\n\n`;
+                    data.data.forEach(c => {
+                        result += `ID: ${c.id}\n`;
+                        result += `Nama: ${c.nama_cabang}\n`;
+                        result += `Shift: ${c.nama_shift}\n`;
+                        result += `Jam: ${c.jam_masuk} - ${c.jam_keluar}\n`;
+                        result += `---\n`;
+                    });
+                    showResult(result, 'success');
+                } else {
+                    showResult('⚠️ No cabang data found! Install dummy data first.', 'error');
+                }
+            } catch (error) {
+                showResult('❌ Error: ' + error.message, 'error');
+            }
+        }
+        
+        async function testEmployeeData() {
+            showResult('Fetching employee data for cabang_id=1...', 'info');
+            
+            try {
+                const response = await fetch('api_shift_calendar.php?action=get_pegawai&cabang_id=1');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    showResult(`✅ Found ${data.data.length} employees for cabang 1:\n${JSON.stringify(data.data, null, 2)}`, 'success');
+                } else {
+                    showResult('❌ Error: ' + (data.message || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                showResult('❌ Error: ' + error.message, 'error');
+            }
+        }
+        
+        async function testShiftAssignments() {
+            showResult('Fetching shift assignments...', 'info');
+            
+            const month = '2025-11'; // November 2025
+            
+            try {
+                const response = await fetch(`api_shift_calendar.php?action=get_assignments&month=${month}&cabang_id=1`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    showResult(`✅ Found ${data.data.length} shift assignments:\n${JSON.stringify(data.data, null, 2)}`, 'success');
+                } else {
+                    showResult('❌ Error: ' + (data.message || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                showResult('❌ Error: ' + error.message, 'error');
+            }
+        }
+        
+        async function testAPI() {
+            showResult('Running all API tests...', 'info');
+            
+            let results = '';
+            
+            // Test 1: get_cabang
+            try {
+                const r1 = await fetch('api_shift_calendar.php?action=get_cabang');
+                const d1 = await r1.json();
+                results += `✅ get_cabang: ${d1.status} (${d1.data?.length || 0} records)\n`;
+            } catch (e) {
+                results += `❌ get_cabang: ${e.message}\n`;
+            }
+            
+            // Test 2: get_pegawai
+            try {
+                const r2 = await fetch('api_shift_calendar.php?action=get_pegawai&cabang_id=1');
+                const d2 = await r2.json();
+                results += `✅ get_pegawai: ${d2.status} (${d2.data?.length || 0} records)\n`;
+            } catch (e) {
+                results += `❌ get_pegawai: ${e.message}\n`;
+            }
+            
+            // Test 3: get_assignments
+            try {
+                const r3 = await fetch('api_shift_calendar.php?action=get_assignments&month=2025-11&cabang_id=1');
+                const d3 = await r3.json();
+                results += `✅ get_assignments: ${d3.status} (${d3.data?.length || 0} records)\n`;
+            } catch (e) {
+                results += `❌ get_assignments: ${e.message}\n`;
+            }
+            
+            showResult(results, 'success');
+        }
+        
+        function openCalendar() {
+            window.open('shift_calendar.php', '_blank');
+            showResult('✅ Opening shift_calendar.php in new tab...', 'success');
+        }
+    </script>
+</body>
+</html>

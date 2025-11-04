@@ -12,6 +12,8 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role
 
 // --- Muat Dependensi & Koneksi ---
 include 'connect.php'; 
+require_once __DIR__ . '/email_helper.php';
+
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
@@ -29,14 +31,16 @@ $email_body_base = ''; // Pesan dasar untuk email
 $wa_message_base = ''; // Pesan dasar untuk WA
 
 // --- Tentukan Status Baru & Pesan Notifikasi ---
-// !!! PENTING: Sesuaikan 'Approved'/'Rejected' dengan 'Disetujui'/'Ditolak' jika Anda menggunakan itu di query Riwayat !!!
+// PENTING: Status database dan email harus konsisten!
 if ($action == 'approve') {
-    $new_status = 'Diterima'; 
+    $new_status = 'Diterima'; // Status di database
+    $email_status = 'Disetujui'; // Status di email (user-friendly)
     $email_subject = "Pengajuan Izin Anda Disetujui (ID: #{$pengajuan_id})";
     $email_body_base = "Pengajuan izin Anda dengan ID #{$pengajuan_id} telah disetujui oleh admin.";
     $wa_message_base = "Info KAORI: Pengajuan izin Anda ID #{$pengajuan_id} telah disetujui.";
 } elseif ($action == 'reject') {
-    $new_status = 'Ditolak';
+    $new_status = 'Ditolak'; // Status di database
+    $email_status = 'Ditolak'; // Status di email
     $email_subject = "Pengajuan Izin Anda Ditolak (ID: #{$pengajuan_id})";
     $email_body_base = "Mohon maaf, pengajuan izin Anda dengan ID #{$pengajuan_id} ditolak.";
     $wa_message_base = "Info KAORI: Mohon maaf, pengajuan izin Anda ID #{$pengajuan_id} ditolak.";
@@ -57,76 +61,56 @@ try {
          throw new Exception("Pengajuan tidak ditemukan atau sudah diproses.");
     }
 
-    // === AMBIL INFO USER UNTUK NOTIFIKASI ===
-    $sql_user_info = "SELECT r.email, r.no_whatsapp, r.nama_lengkap 
-                      FROM pengajuan_izin p 
-                      JOIN register r ON p.user_id = r.id 
-                      WHERE p.id = ?";
-    $stmt_user_info = $pdo->prepare($sql_user_info);
-    $stmt_user_info->execute([$pengajuan_id]);
-    $user_info = $stmt_user_info->fetch(PDO::FETCH_ASSOC);
-    if (!$user_info) {
-        throw new Exception("Gagal mengambil info user untuk notifikasi.");
-    }
-    $user_email = $user_info['email'];
-    $user_wa = $user_info['no_whatsapp']; 
-    $user_nama = $user_info['nama_lengkap'];
+    // === AMBIL INFO USER DAN PENGAJUAN UNTUK NOTIFIKASI ===
+    $sql_detail = "SELECT 
+                        p.id, p.perihal, p.tanggal_mulai, p.tanggal_selesai, p.lama_izin, p.alasan, p.status,
+                        r.id as user_id, r.email, r.no_whatsapp, r.nama_lengkap, r.posisi
+                   FROM pengajuan_izin p 
+                   JOIN register r ON p.user_id = r.id 
+                   WHERE p.id = ?";
+    $stmt_detail = $pdo->prepare($sql_detail);
+    $stmt_detail->execute([$pengajuan_id]);
+    $detail_data = $stmt_detail->fetch(PDO::FETCH_ASSOC);
     
-    // Tambahkan sapaan ke pesan
-    $email_body = "Halo " . htmlspecialchars($user_nama) . ",<br><br>" . $email_body_base;
-    $wa_message = "Halo " . $user_nama . ", " . $wa_message_base;
-
-    // --- PROTOTYPE WHATSAPP: Buat Link Click-to-Chat ---
-    // Pastikan nomor WA dalam format internasional tanpa '+' atau spasi (misal: 62812...)
-    //$wa_number_clean = preg_replace('/[^0-9]/', '', $user_wa); 
-    // Jika tidak dimulai dengan 62, tambahkan (asumsi nomor Indonesia)
-    //if (substr($wa_number_clean, 0, 2) !== '62') {
-         //if ($wa_number_clean[0] === '0') {
-             //$wa_number_clean = '62' . substr($wa_number_clean, 1);
-         //} else {
-             //$wa_number_clean = '62' . $wa_number_clean; // Tambahkan asumsi
-         //}
-    //}
-    //$wa_encoded_message = urlencode($wa_message);
-    //$wa_link = "https://wa.me/{$wa_number_clean}?text={$wa_encoded_message}";
-    
-    // Tambahkan link WA ke email
-    $email_body .= "<br><br>Untuk informasi lebih lanjut, silakan hubungi HR atau balas Email ini.";
-
-    // === KIRIM NOTIFIKASI EMAIL (Gunakan PHPMailer) ===
-    // !!! ANDA HARUS MENGINSTAL PHPMailer dan MENGISI DETAIL SMTP !!!
-    $mail = new PHPMailer(true);
-    try {
-        // Konfigurasi Server SMTP (contoh Gmail, perlu Allow Less Secure Apps atau App Password)
-        // $mail->SMTPDebug = 2; // Aktifkan untuk debugging detail
-        $mail->isSMTP();
-        $mail->Host       = 'smtp.gmail.com'; // Ganti dengan host SMTP Anda
-        $mail->SMTPAuth   = true;
-        $mail->Username   = 'kaori.aplikasi.notif@gmail.com'; // Ganti email Anda
-        $mail->Password   = 'imjq nmeq vyig umgn'; // Ganti password aplikasi / password biasa
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS; // Gunakan SMTPS untuk Gmail
-        $mail->Port       = 465; // Port SMTPS Gmail
-
-        // Pengirim & Penerima
-        $mail->setFrom('kaori.aplikasi.notif@gmail.com', 'Sistem Notifikasi KAORI'); // Ganti email pengirim
-        $mail->addAddress($user_email, $user_nama); // Penerima
-
-        // Konten Email
-        $mail->isHTML(true); // Set email format ke HTML
-        $mail->Subject = $email_subject;
-        $mail->Body    = $email_body;
-        $mail->AltBody = strip_tags($email_body); // Versi teks biasa
-
-        $mail->send();
-        // Email berhasil terkirim
-        
-    } catch (Exception $e) {
-        // Gagal kirim email, log error tapi jangan hentikan proses utama
-        error_log("PHPMailer Error [ID: {$pengajuan_id}]: " . $mail->ErrorInfo);
-        // Anda bisa memilih untuk melempar exception di sini jika email WAJIB terkirim
-        // throw new Exception("Gagal mengirim email notifikasi."); 
+    if (!$detail_data) {
+        throw new Exception("Gagal mengambil detail pengajuan untuk notifikasi.");
     }
     
+    // Pisahkan data izin dan user
+    $izin_data = [
+        'id' => $detail_data['id'],
+        'tanggal_mulai' => $detail_data['tanggal_mulai'],
+        'tanggal_selesai' => $detail_data['tanggal_selesai'],
+        'durasi_hari' => $detail_data['lama_izin'],
+        'alasan' => $detail_data['alasan'],
+        'jenis_izin' => $detail_data['perihal'],
+        'status' => $new_status
+    ];
+    
+    $user_data = [
+        'id' => $detail_data['user_id'],
+        'email' => $detail_data['email'],
+        'no_whatsapp' => $detail_data['no_whatsapp'],
+        'nama_lengkap' => $detail_data['nama_lengkap'],
+        'posisi' => $detail_data['posisi']
+    ];
+    
+    // Ambil data approver (admin yang melakukan approve)
+    $approver_data = [
+        'id' => $_SESSION['user_id'],
+        'nama_lengkap' => $_SESSION['nama_lengkap'] ?? 'Admin'
+    ];
+    
+    // === KIRIM NOTIFIKASI EMAIL MENGGUNAKAN HELPER FUNCTION ===
+    // PENTING: Gunakan $email_status (user-friendly) bukan $new_status (database)
+    $email_sent = sendEmailIzinStatus($izin_data, $user_data, $email_status, '', $approver_data);
+    
+    if ($email_sent) {
+        error_log("✅ Email notifikasi status berhasil dikirim ke " . $user_data['email']);
+    } else {
+        error_log("⚠️ Email notifikasi status gagal dikirim (update status tetap berhasil)");
+        // Tidak perlu throw exception, karena yang penting update status berhasil
+    }
 
     // Jika semua berhasil sampai sini
     $pdo->commit(); // Konfirmasi semua perubahan database

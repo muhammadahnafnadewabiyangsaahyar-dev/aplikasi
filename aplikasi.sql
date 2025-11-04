@@ -153,7 +153,7 @@ CREATE TABLE `pegawai_whitelist` (
   `role` varchar(20) DEFAULT 'user',
   PRIMARY KEY (`id`),
   UNIQUE KEY `nama_lengkap` (`nama_lengkap`)
-) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -162,7 +162,7 @@ CREATE TABLE `pegawai_whitelist` (
 
 LOCK TABLES `pegawai_whitelist` WRITE;
 /*!40000 ALTER TABLE `pegawai_whitelist` DISABLE KEYS */;
-INSERT INTO `pegawai_whitelist` VALUES (1,'Mochammad Rifqi Athaullah Herfian','Barista','pending','2025-11-01 07:05:32','user'),(2,'Farhan Zul Iqram','Barista','pending','2025-11-01 07:05:32','user'),(3,'Fathur Dwi Bintang','Barista','pending','2025-11-01 07:05:32','user'),(4,'Muh. Rezky Widodo','Barista','pending','2025-11-01 07:05:32','user'),(5,'Akbar Andipa','Kitchen','pending','2025-11-01 07:05:32','user'),(6,'Muhammad Isnan Al Gaffar','Kitchen','pending','2025-11-01 07:05:32','user'),(7,'Muhammad Arhamul Ihza M','Kitchen','pending','2025-11-01 07:05:32','user'),(8,'Zulfikar','Server','pending','2025-11-01 07:05:32','user'),(9,'Muh. Rayhan Aprisal Fachrun','Barista','pending','2025-11-01 07:05:32','user'),(10,'Fitrah Ramadan Saputra','Barista','pending','2025-11-01 07:05:32','user'),(11,'Heru Hermawan','Barista','pending','2025-11-01 07:05:32','user'),(12,'Muh. Farel Rumante','Barista','pending','2025-11-01 07:05:32','user'),(13,'Andi Utha Ananta Winata','Kitchen','pending','2025-11-01 07:05:32','user'),(14,'Ahmad Fairuzi','Kitchen','pending','2025-11-01 07:05:32','user'),(15,'Muhammad Arya','Kitchen','pending','2025-11-01 07:05:32','user'),(16,'M Audi Alfan M S','Server','pending','2025-11-01 07:05:32','user'),(17,'M. Maher','Server','pending','2025-11-01 07:05:32','user'),(18,'Eko Prasetio','Barista','pending','2025-11-01 07:05:32','user'),(19,'Muhammad Rafiul','Barista','pending','2025-11-01 07:05:32','user'),(20,'Arman Maulana','Barista','pending','2025-11-01 07:05:32','user'),(21,'Ahmad Mahendra','Barista','pending','2025-11-01 07:05:32','user'),(22,'Miftahul Ichwan','Barista','pending','2025-11-01 07:05:32','user'),(23,'Muh. Chasan Abdillah','Barista','pending','2025-11-01 07:05:32','user'),(24,'Muh. Rasul Alamsyah H','Kitchen','pending','2025-11-01 07:05:32','user'),(25,'Virgiawan','Kitchen','pending','2025-11-01 07:05:32','user'),(26,'M. Afif Yunus','Kitchen','pending','2025-11-01 07:05:32','user'),(27,'M Taufiq Ramadhan','Kitchen','pending','2025-11-01 07:05:32','user'),(28,'Angga Eka Saputra Dewa','Server','pending','2025-11-01 07:05:32','user'),(29,'Al Mukmin Dwi Yanto','Server','pending','2025-11-01 07:05:32','user'),(30,'Muh. Adnil Nizar','Server','pending','2025-11-01 07:05:32','user'),(31,'Andi Abdul Chaerullah A','Marketing','pending','2025-11-01 07:05:32','admin'),(32,'Rahmat Maulana','SCM','pending','2025-11-01 07:05:32','admin'),(33,'M Yogi Alfadillah','Akuntan','pending','2025-11-01 07:05:32','admin'),(34,'Muhammad Abizar Nafara','Staf HR','terdaftar','2025-11-01 07:05:32','admin'),(35,'Agung Dharmawan','Finance','pending','2025-11-01 07:05:32','admin'),(36,'Mohammad Rizky Putra','Owner','pending','2025-11-01 07:05:32','admin');
+INSERT INTO `pegawai_whitelist` VALUES (1,'Mochammad Rifqi Athaullah Herfian','Barista','pending','2025-11-01 07:05:32','user'),(2,'Farhan Zul Iqram','Barista','pending','2025-11-01 07:05:32','user'),(3,'Fathur Dwi Bintang','Barista','pending','2025-11-01 07:05:32','user'),(4,'Muh. Rezky Widodo','Barista','pending','2025-11-01 07:05:32','user'),(5,'Akbar Andipa','Kitchen','pending','2025-11-01 07:05:32','user'),(6,'Muhammad Isnan Al Gaffar','Kitchen','pending','2025-11-01 07:05:32','user'),(7,'Muhammad Arhamul Ihza M','Kitchen','pending','2025-11-01 07:05:32','user'),(8,'Zulfikar','Server','pending','2025-11-01 07:05:32','user'),(9,'Muh. Rayhan Aprisal Fachrun','Barista','pending','2025-11-01 07:05:32','user'),(10,'Fitrah Ramadan Saputra','Barista','pending','2025-11-01 07:05:32','user'),(11,'Heru Hermawan','Barista','pending','2025-11-01 07:05:32','user'),(12,'Muh. Farel Rumante','Barista','pending','2025-11-01 07:05:32','user'),(13,'Andi Utha Ananta Winata','Kitchen','pending','2025-11-01 07:05:32','user'),(14,'Ahmad Fairuzi','Kitchen','pending','2025-11-01 07:05:32','user'),(15,'Muhammad Arya','Kitchen','pending','2025-11-01 07:05:32','user'),(16,'M Audi Alfan M S','Server','pending','2025-11-01 07:05:32','user'),(17,'M. Maher','Server','pending','2025-11-01 07:05:32','user'),(18,'Eko Prasetio','Barista','pending','2025-11-01 07:05:32','user'),(19,'Muhammad Rafiul','Barista','pending','2025-11-01 07:05:32','user'),(20,'Arman Maulana','Barista','pending','2025-11-01 07:05:32','user'),(21,'Ahmad Mahendra','Barista','pending','2025-11-01 07:05:32','user'),(22,'Miftahul Ichwan','Barista','pending','2025-11-01 07:05:32','user'),(23,'Muh. Chasan Abdillah','Barista','pending','2025-11-01 07:05:32','user'),(24,'Muh. Rasul Alamsyah H','Kitchen','pending','2025-11-01 07:05:32','user'),(25,'Virgiawan','Kitchen','pending','2025-11-01 07:05:32','user'),(26,'M. Afif Yunus','Kitchen','pending','2025-11-01 07:05:32','user'),(27,'M Taufiq Ramadhan','Kitchen','pending','2025-11-01 07:05:32','user'),(28,'Angga Eka Saputra Dewa','Server','pending','2025-11-01 07:05:32','user'),(29,'Al Mukmin Dwi Yanto','Server','pending','2025-11-01 07:05:32','user'),(30,'Muh. Adnil Nizar','Server','pending','2025-11-01 07:05:32','user'),(31,'Andi Abdul Chaerullah A','Marketing','pending','2025-11-01 07:05:32','admin'),(32,'Rahmat Maulana','SCM','pending','2025-11-01 07:05:32','admin'),(33,'M Yogi Alfadillah','Akuntan','pending','2025-11-01 07:05:32','admin'),(34,'Muhammad Abizar Nafara','HR','terdaftar','2025-11-01 07:05:32','admin'),(35,'Agung Dharmawan','Finance','pending','2025-11-01 07:05:32','admin'),(36,'Mohammad Rizky Putra','Owner','pending','2025-11-01 07:05:32','admin'),(37,'Muhammad Ahnaf Nadewa Biyangsa Ahyar','superadmin','pending','2025-11-02 13:44:15','user'),(38,'tes','HR','pending','2025-11-02 15:29:28','user');
 /*!40000 ALTER TABLE `pegawai_whitelist` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -209,9 +209,10 @@ DROP TABLE IF EXISTS `posisi_jabatan`;
 CREATE TABLE `posisi_jabatan` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `nama_posisi` varchar(100) NOT NULL,
+  `role_posisi` varchar(20) DEFAULT 'user',
   PRIMARY KEY (`id`),
   UNIQUE KEY `nama_posisi` (`nama_posisi`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -220,7 +221,7 @@ CREATE TABLE `posisi_jabatan` (
 
 LOCK TABLES `posisi_jabatan` WRITE;
 /*!40000 ALTER TABLE `posisi_jabatan` DISABLE KEYS */;
-INSERT INTO `posisi_jabatan` VALUES (6,'Akuntan'),(2,'Barista'),(7,'Finance'),(9,'HR'),(1,'Kitchen'),(5,'Marketing'),(8,'Owner'),(10,'SCM'),(3,'Senior Barista'),(4,'Server');
+INSERT INTO `posisi_jabatan` VALUES (1,'Kitchen','user'),(2,'Barista','user'),(3,'Senior Barista','user'),(4,'Server','user'),(5,'Marketing','admin'),(6,'Akuntan','admin'),(7,'Finance','admin'),(8,'Owner','admin'),(10,'SCM','admin'),(11,'HR','admin'),(12,'Tidak Ada Posisi','user'),(13,'superadmin','admin');
 /*!40000 ALTER TABLE `posisi_jabatan` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -257,7 +258,7 @@ CREATE TABLE `register` (
 
 LOCK TABLES `register` WRITE;
 /*!40000 ALTER TABLE `register` DISABLE KEYS */;
-INSERT INTO `register` VALUES (1,'superadmin','superadmin','superadmin','superadmin','superadmin@gmail.com','$2y$10$lXNDAqQOdVC0uzYk64O68.pHH4RV.U1XkGw9i4YDtjjzgxEflrf2y','superadmin','2025-10-21','admin','1_1762016999.png','ttd_user_1_1762019092.png'),(4,'tesrole','tesrole','tesrole','081928390128','tesrole@gmail.com','$2y$10$Q4OfmDwU1go70TILcznLkOWIW0Gn62dvbQu5wU8N6etOqtPxeRDsW','tesrole','2025-10-31','user',NULL,NULL),(7,'Muhammad Abizar Nafara','Staf HR','Tes','+62 8125800437','abizarnafara@gmail.com','$2y$10$gf3UkVsrfTGhEFOLG4REreURGdYX1fRD0shUgHITf3JEKBCrbod2e','abizarnafara','2025-11-01','admin',NULL,NULL);
+INSERT INTO `register` VALUES (1,'superadmin','superadmin','superadmin','superadmin','superadmin@gmail.com','$2y$10$lXNDAqQOdVC0uzYk64O68.pHH4RV.U1XkGw9i4YDtjjzgxEflrf2y','superadmin','2025-10-21','admin','1_1762016999.png','ttd_user_1_1762019092.png'),(4,'tesrole','tesrole','tesrole','081928390128','tesrole@gmail.com','$2y$10$Q4OfmDwU1go70TILcznLkOWIW0Gn62dvbQu5wU8N6etOqtPxeRDsW','tesrole','2025-10-31','user',NULL,NULL),(7,'Muhammad Abizar Nafara','Tidak Ada Posisi','Tes','+62 8125800437','abizarnafara@gmail.com','$2y$10$gf3UkVsrfTGhEFOLG4REreURGdYX1fRD0shUgHITf3JEKBCrbod2e','abizarnafara','2025-11-01','user',NULL,NULL);
 /*!40000 ALTER TABLE `register` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -313,4 +314,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-02  1:45:01
+-- Dump completed on 2025-11-03  0:00:01

@@ -61,36 +61,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_password'])) {
 // ========================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     // Ambil data dari form
-    $nama_lengkap = $_POST['nama_lengkap'] ?? '';
     $email = $_POST['email'] ?? '';
     $no_wa = $_POST['no_wa'] ?? '';
-    $outlet = $_POST['outlet'] ?? '';
-    $username = $_POST['username'] ?? '';
 
-    // Validasi sederhana (opsional tapi disarankan)
-    if (empty($nama_lengkap) || empty($email) || empty($username)) {
-        $profile_error = "Nama Lengkap, Email, dan Username tidak boleh kosong.";
+    // Validasi sederhana
+    if (empty($email)) {
+        $profile_error = "Email tidak boleh kosong.";
     } else {
         try {
-            $sql_update_profile = "UPDATE register SET nama_lengkap = ?, email = ?, no_whatsapp = ?, outlet = ?, username = ? WHERE id = ?";
+            $sql_update_profile = "UPDATE register SET email = ?, no_whatsapp = ? WHERE id = ?";
             $stmt_update_profile = $pdo->prepare($sql_update_profile);
             
-            if ($stmt_update_profile->execute([$nama_lengkap, $email, $no_wa, $outlet, $username, $user_id])) {
-                // Update data di SESSION agar langsung berubah di halaman
-                $_SESSION['nama_lengkap'] = $nama_lengkap;
-                $_SESSION['username'] = $username;
-                
+            if ($stmt_update_profile->execute([$email, $no_wa, $user_id])) {
                 $profile_success = "Profil berhasil diperbarui.";
-                // Refresh data di halaman ini akan diambil oleh BLOK 3
             } else {
                 $profile_error = "Gagal memperbarui profil. Coba lagi.";
             }
         } catch (PDOException $e) {
             // Tangani error jika data duplikat (Error code 1062)
             if ($e->errorInfo[1] == 1062) {
-                if (strpos($e->getMessage(), 'username')) {
-                    $profile_error = 'Username ini sudah digunakan.';
-                } elseif (strpos($e->getMessage(), 'email')) {
+                if (strpos($e->getMessage(), 'email')) {
                     $profile_error = 'Email ini sudah digunakan.';
                 } elseif (strpos($e->getMessage(), 'no_whatsapp')) {
                     $profile_error = 'No. WhatsApp ini sudah digunakan.';
@@ -221,9 +211,8 @@ $home_url = 'mainpageadmin.php';
             <form action="profile.php" method="POST" autocomplete="off">
                 <?php if ($profile_success): ?><p class="success-message"><?php echo $profile_success; ?></p><?php endif; ?>
                 <?php if ($profile_error): ?><p class="error-message"><?php echo $profile_error; ?></p><?php endif; ?>
-
                 <div class="input-group">
-                    <input type="text" name="nama_lengkap" value="<?php echo htmlspecialchars($user_data['nama_lengkap']); ?>" required>
+                    <input type="text" name="nama_lengkap" value="<?php echo htmlspecialchars($user_data['nama_lengkap']); ?>" readonly disabled>
                     <label>Nama Lengkap</label>
                 </div>
                 <div class="input-group">
@@ -231,7 +220,7 @@ $home_url = 'mainpageadmin.php';
                     <label>Email</label>
                 </div>
                 <div class="input-group">
-                    <input type="text" name="username" value="<?php echo htmlspecialchars($user_data['username']); ?>" required>
+                    <input type="text" name="username" value="<?php echo htmlspecialchars($user_data['username']); ?>" readonly disabled>
                     <label>Username</label>
                 </div>
                 <div class="input-group">
@@ -239,7 +228,7 @@ $home_url = 'mainpageadmin.php';
                     <label>No. WhatsApp</label>
                 </div>
                 <div class="input-group">
-                    <input type="text" name="outlet" value="<?php echo htmlspecialchars($user_data['outlet']); ?>">
+                    <input type="text" name="outlet" value="<?php echo htmlspecialchars($user_data['outlet']); ?>" readonly disabled>
                     <label>Outlet</label>
                 </div>
                 <button type="submit" name="update_profile" class="btn">Update Profil</button>

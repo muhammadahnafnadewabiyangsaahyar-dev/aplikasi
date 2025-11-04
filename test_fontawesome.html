@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
+    <title>Test Font Awesome Icons</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .test-icon {
+            font-size: 24px;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Font Awesome Icons</h1>
+    
+    <h2>Method 1: Using &lt;i&gt; tag</h2>
+    <i class="fa fa-user test-icon"></i> User Icon<br>
+    <i class="fa fa-brands fa-facebook-f test-icon"></i> Facebook Icon<br>
+    <i class="fa fa-solid fa-home test-icon"></i> Home Icon<br>
+    
+    <h2>Method 2: Using class combinations</h2>
+    <i class="fas fa-heart test-icon" style="color: red;"></i> Heart Icon<br>
+    <i class="far fa-heart test-icon" style="color: blue;"></i> Heart Outline Icon<br>
+    
+    <h2>Method 3: Direct unicode</h2>
+    <span style="font-family: 'Font Awesome 6 Free'; font-weight: 900;">&#xf007;</span> User via Unicode<br>
+    
+    <hr>
+    <p><strong>Jika Anda melihat icon di atas, Font Awesome bekerja dengan baik!</strong></p>
+    <p>Jika tidak, kemungkinan:</p>
+    <ul>
+        <li>CDN Font Awesome down atau blocked</li>
+        <li>Browser cache issue</li>
+        <li>Versi Font Awesome 7.0.1 tidak tersedia (coba versi 6.x)</li>
+    </ul>
+    
+    <hr>
+    <p><a href="index.php">Kembali ke Index</a></p>
+</body>
+</html>

@@ -1,0 +1,460 @@
+<?php
+// Start output buffering untuk memastikan redirect berjalan lancar
+ob_start();
+
+// Endpoint AJAX cek whitelist (harus di paling atas, sebelum session_start)
+if (isset($_GET['check']) && isset($_GET['nama'])) {
+    include 'connect.php';
+    $nama = trim($_GET['nama']);
+    $stmt = $pdo->prepare("SELECT nama_lengkap, posisi, status_registrasi FROM pegawai_whitelist WHERE nama_lengkap = ?");
+    $stmt->execute([$nama]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($row && $row['status_registrasi'] !== 'terdaftar') {
+        ob_end_clean();
+        echo json_encode([
+            'found' => true,
+            'nama_lengkap' => $row['nama_lengkap'],
+            'posisi' => $row['posisi'],
+            'status' => $row['status_registrasi']
+        ]);
+    } else {
+        ob_end_clean();
+        echo json_encode(['found' => false]);
+    }
+    exit;
+}
+
+session_start();
+include 'connect.php';
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
+    header('Location: index.php?error=unauthorized');
+    exit;
+}
+
+// Generate CSRF token jika belum ada
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// Handler hapus via GET (dengan CSRF protection) - ALTERNATIF LEBIH AMAN
+if (isset($_GET['hapus_nama']) && isset($_GET['csrf'])) {
+    if ($_GET['csrf'] === $_SESSION['csrf_token']) {
+        $hapus_nama = trim($_GET['hapus_nama']);
+        if ($hapus_nama !== '') {
+            try {
+                $stmt = $pdo->prepare("DELETE FROM pegawai_whitelist WHERE nama_lengkap = ?");
+                $stmt->execute([$hapus_nama]);
+                header('Location: whitelist.php?success=' . urlencode('Pegawai berhasil dihapus dari whitelist.'));
+                exit;
+            } catch (PDOException $e) {
+                header('Location: whitelist.php?error=' . urlencode('Gagal menghapus pegawai: ' . $e->getMessage()));
+                exit;
+            }
+        } else {
+            header('Location: whitelist.php?error=' . urlencode('Nama pegawai tidak valid.'));
+            exit;
+        }
+    } else {
+        header('Location: whitelist.php?error=' . urlencode('Invalid CSRF token.'));
+        exit;
+    }
+}
+
+// Tangkap feedback dari URL (PRG Pattern)
+$success = '';
+$error = '';
+if (isset($_GET['success'])) {
+    $success = htmlspecialchars($_GET['success']);
+}
+if (isset($_GET['error'])) {
+    $error = htmlspecialchars($_GET['error']);
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Debug logging - HAPUS SETELAH TESTING
+    error_log("POST received: " . print_r($_POST, true));
+    
+    // Validasi CSRF token untuk mencegah duplicate submission
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        header('Location: whitelist.php?error=' . urlencode('Invalid request. Please try again.'));
+        exit;
+    }
+    
+    // JANGAN regenerate token di sini - biarkan token tetap sama selama session
+    // Token hanya akan berubah saat user logout atau session expire
+    
+    if (isset($_POST['import'])) {
+        // Proses import file
+        $file = $_FILES['import_file'] ?? null;
+        if ($file && $file['error'] === UPLOAD_ERR_OK) {
+            $filename = $file['tmp_name'];
+            $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+            
+            // Validasi ekstensi file
+            if (!in_array($extension, ['csv', 'txt'])) {
+                header('Location: whitelist.php?error=' . urlencode('Hanya diperbolehkan mengupload file dengan ekstensi CSV atau TXT.'));
+                exit;
+            } else {
+                // Proses sesuai dengan jenis file
+                try {
+                    if ($extension === 'csv' || $extension === 'txt') {
+                        $handle = fopen($filename, "r");
+                        if ($handle) {
+                            $imported = 0;
+                            $skipped = 0;
+                            $skippedRows = [];
+                            $rowNum = 0;
+                            while (($row = fgetcsv($handle, 1000, ";")) !== false) {
+                                $rowNum++;
+                                // Skip header if first row contains 'nama' or 'posisi'
+                                if ($rowNum === 1 && (stripos($row[1] ?? '', 'nama') !== false || stripos($row[2] ?? '', 'posisi') !== false)) {
+                                    continue;
+                                }
+                                $nama = trim($row[1] ?? '');
+                                $posisi = trim($row[2] ?? '');
+                                if ($nama === '') { $skipped++; $skippedRows[] = $rowNum; continue; }
+                                // Cek duplikat
+                                $stmt = $pdo->prepare("SELECT COUNT(*) FROM pegawai_whitelist WHERE nama_lengkap = ?");
+                                $stmt->execute([$nama]);
+                                if ($stmt->fetchColumn() > 0) { $skipped++; $skippedRows[] = $rowNum; continue; }
+                                // Insert
+                                $stmt = $pdo->prepare("INSERT INTO pegawai_whitelist (nama_lengkap, posisi, status_registrasi) VALUES (?, ?, 'pending')");
+                                $stmt->execute([$nama, $posisi]);
+                                $imported++;
+                            }
+                            fclose($handle);
+                            $successMsg = "Import selesai: $imported data ditambah, $skipped dilewati.";
+                            if ($skipped > 0) {
+                                $successMsg .= " Baris dilewati: " . implode(", ", $skippedRows) . ".";
+                            }
+                            header('Location: whitelist.php?success=' . urlencode($successMsg));
+                            exit;
+                        } else {
+                            header('Location: whitelist.php?error=' . urlencode('Gagal membaca file.'));
+                            exit;
+                        }
+                    }
+                } catch (Exception $e) {
+                    header('Location: whitelist.php?error=' . urlencode('Gagal mengimpor data: ' . $e->getMessage()));
+                    exit;
+                }
+            }
+        } else {
+            header('Location: whitelist.php?error=' . urlencode('Gagal mengupload file.'));
+            exit;
+        }
+    } elseif (isset($_POST['edit'])) {
+        // Proses edit whitelist + komponen gaji
+        $old_nama = trim($_POST['old_nama_lengkap'] ?? '');
+        $nama = trim($_POST['nama_lengkap'] ?? '');
+        $posisi = trim($_POST['posisi'] ?? '');
+        $jabatan = trim($_POST['jabatan'] ?? '');
+        // Gunakan NULL jika field kosong (setelah struktur tabel diupdate)
+        $gaji_pokok = $_POST['gaji_pokok'] !== '' ? floatval($_POST['gaji_pokok']) : null;
+        $tunjangan_transport = $_POST['tunjangan_transport'] !== '' ? floatval($_POST['tunjangan_transport']) : null;
+        $tunjangan_makan = $_POST['tunjangan_makan'] !== '' ? floatval($_POST['tunjangan_makan']) : null;
+        $overwork = $_POST['overwork'] !== '' ? floatval($_POST['overwork']) : null;
+        $tunjangan_jabatan = $_POST['tunjangan_jabatan'] !== '' ? floatval($_POST['tunjangan_jabatan']) : null;
+        $bonus_kehadiran = $_POST['bonus_kehadiran'] !== '' ? floatval($_POST['bonus_kehadiran']) : null;
+        $bonus_marketing = $_POST['bonus_marketing'] !== '' ? floatval($_POST['bonus_marketing']) : null;
+        $insentif_omset = $_POST['insentif_omset'] !== '' ? floatval($_POST['insentif_omset']) : null;
+        try {
+            // Update pegawai_whitelist
+            $stmt = $pdo->prepare("UPDATE pegawai_whitelist SET nama_lengkap=?, posisi=?, role=? WHERE nama_lengkap=?");
+            $stmt->execute([$nama, $posisi, $_POST['role'] ?? 'user', $old_nama]);
+            // Lookup register_id dari tabel register
+            $stmt = $pdo->prepare("SELECT id FROM register WHERE nama_lengkap=? LIMIT 1");
+            $stmt->execute([$nama]);
+            $register_id = $stmt->fetchColumn();
+            if (!$register_id) {
+                header('Location: whitelist.php?error=' . urlencode('Nama pegawai tidak ditemukan di data utama (register). Silakan tambahkan pegawai ke data utama terlebih dahulu.'));
+                exit;
+            }
+            // Cek apakah sudah ada komponen_gaji
+            $stmt = $pdo->prepare("SELECT id FROM komponen_gaji WHERE jabatan=?");
+            $stmt->execute([$old_nama]);
+            $id_gaji = $stmt->fetchColumn();
+            if ($id_gaji) {
+                // Update
+                $stmt = $pdo->prepare("UPDATE komponen_gaji SET register_id=?, jabatan=?, gaji_pokok=?, tunjangan_transport=?, tunjangan_makan=?, overwork=?, tunjangan_jabatan=?, bonus_kehadiran=?, bonus_marketing=?, insentif_omset=? WHERE id=?");
+                $stmt->execute([$register_id, $jabatan, $gaji_pokok, $tunjangan_transport, $tunjangan_makan, $overwork, $tunjangan_jabatan, $bonus_kehadiran, $bonus_marketing, $insentif_omset, $id_gaji]);
+            } else {
+                // Insert baru
+                $stmt = $pdo->prepare("INSERT INTO komponen_gaji (register_id, jabatan, gaji_pokok, tunjangan_transport, tunjangan_makan, overwork, tunjangan_jabatan, bonus_kehadiran, bonus_marketing, insentif_omset) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$register_id, $jabatan, $gaji_pokok, $tunjangan_transport, $tunjangan_makan, $overwork, $tunjangan_jabatan, $bonus_kehadiran, $bonus_marketing, $insentif_omset]);
+            }
+            header('Location: whitelist.php?success=' . urlencode('Data pegawai berhasil diupdate.'));
+            exit;
+        } catch (Exception $e) {
+            header('Location: whitelist.php?error=' . urlencode('Gagal update: ' . $e->getMessage()));
+            exit;
+        }
+    } elseif (isset($_POST['hapus'])) {
+        // Handler hapus pegawai
+        error_log("HAPUS HANDLER: hapus=" . (isset($_POST['hapus']) ? $_POST['hapus'] : 'NOT SET'));
+        error_log("HAPUS HANDLER: hapus_nama=" . ($_POST['hapus_nama'] ?? 'NOT SET'));
+        
+        $hapus_nama = trim($_POST['hapus_nama'] ?? '');
+        if ($hapus_nama === '') {
+            error_log("HAPUS HANDLER: Nama kosong, redirecting dengan error");
+            header('Location: whitelist.php?error=' . urlencode('Nama pegawai tidak valid atau kosong.'));
+            exit;
+        }
+        try {
+            error_log("HAPUS HANDLER: Mencoba hapus: " . $hapus_nama);
+            $stmt = $pdo->prepare("DELETE FROM pegawai_whitelist WHERE nama_lengkap = ?");
+            $stmt->execute([$hapus_nama]);
+            error_log("HAPUS HANDLER: Berhasil hapus, redirecting dengan success");
+            header('Location: whitelist.php?success=' . urlencode('Pegawai berhasil dihapus dari whitelist.'));
+            exit;
+        } catch (PDOException $e) {
+            error_log("HAPUS HANDLER: Gagal hapus: " . $e->getMessage());
+            header('Location: whitelist.php?error=' . urlencode('Gagal menghapus pegawai: ' . $e->getMessage()));
+            exit;
+        }
+    } elseif (isset($_POST['nama_lengkap'])) {
+        // Handler tambah pegawai baru
+        $nama = trim($_POST['nama_lengkap'] ?? '');
+        $posisi = trim($_POST['posisi'] ?? '');
+        $role = $_POST['role'] ?? 'user';
+        if ($nama === '') {
+            header('Location: whitelist.php?error=' . urlencode('Nama tidak boleh kosong.'));
+            exit;
+        } else {
+            try {
+                // Cek apakah sudah ada
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM pegawai_whitelist WHERE nama_lengkap = ?");
+                $stmt->execute([$nama]);
+                if ($stmt->fetchColumn() > 0) {
+                    header('Location: whitelist.php?error=' . urlencode('Nama sudah ada di whitelist.'));
+                    exit;
+                } else {
+                    $stmt = $pdo->prepare("INSERT INTO pegawai_whitelist (nama_lengkap, posisi, status_registrasi, role) VALUES (?, ?, 'pending', ?)");
+                    $stmt->execute([$nama, $posisi !== '' ? $posisi : null, $role]);
+                    header('Location: whitelist.php?success=' . urlencode('Nama berhasil ditambahkan ke whitelist.'));
+                    exit;
+                }
+            } catch (PDOException $e) {
+                header('Location: whitelist.php?error=' . urlencode('Gagal menambah data: ' . $e->getMessage()));
+                exit;
+            }
+        }
+    } else {
+        // Catch-all untuk POST yang tidak dikenali
+        error_log("CATCH-ALL: POST tidak dikenali!");
+        error_log("CATCH-ALL: isset import=" . (isset($_POST['import']) ? 'YES' : 'NO'));
+        error_log("CATCH-ALL: isset edit=" . (isset($_POST['edit']) ? 'YES' : 'NO'));
+        error_log("CATCH-ALL: isset hapus=" . (isset($_POST['hapus']) ? 'YES' : 'NO'));
+        error_log("CATCH-ALL: isset nama_lengkap=" . (isset($_POST['nama_lengkap']) ? 'YES' : 'NO'));
+        header('Location: whitelist.php?error=' . urlencode('Invalid request. Please try again.'));
+        exit;
+    }
+}
+
+// Tambahkan handler PHP untuk tambah posisi baru
+if (isset($_POST['buat_posisi']) && !empty($_POST['nama_posisi_baru'])) {
+    $nama_posisi_baru = trim($_POST['nama_posisi_baru']);
+    if ($nama_posisi_baru !== '') {
+        // Cek duplikat
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM posisi_jabatan WHERE nama_posisi = ?");
+        $stmt->execute([$nama_posisi_baru]);
+        if ($stmt->fetchColumn() == 0) {
+            $stmt = $pdo->prepare("INSERT INTO posisi_jabatan (nama_posisi) VALUES (?)");
+            $stmt->execute([$nama_posisi_baru]);
+            header('Location: whitelist.php?success=' . urlencode('Posisi baru berhasil ditambahkan.'));
+            exit;
+        } else {
+            header('Location: whitelist.php?error=' . urlencode('Posisi sudah ada.'));
+            exit;
+        }
+    }
+}
+
+// Ambil data whitelist + gaji
+$data = $pdo->query("SELECT pw.nama_lengkap, pw.posisi, pw.role, pw.status_registrasi, kg.jabatan, kg.gaji_pokok, kg.tunjangan_transport, kg.tunjangan_makan, kg.overwork, kg.tunjangan_jabatan, kg.bonus_kehadiran, kg.bonus_marketing, kg.insentif_omset FROM pegawai_whitelist pw LEFT JOIN komponen_gaji kg ON pw.nama_lengkap = kg.jabatan ORDER BY pw.nama_lengkap ASC")->fetchAll(PDO::FETCH_ASSOC);
+
+// Ambil daftar posisi jabatan
+$posisi_jabatan = $pdo->query("SELECT nama_posisi FROM posisi_jabatan ORDER BY nama_posisi ASC")->fetchAll(PDO::FETCH_COLUMN);
+
+// Cek baris yang sedang diedit
+$edit_nama = $_GET['edit_nama'] ?? '';
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whitelist Pegawai</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="headercontainer">
+    <?php include 'navbar.php'; ?>
+</div>
+<div class="main-title">Teman KAORI</div>
+<div class="subtitle-container">
+    <p class="subtitle">Selamat Datang, <?= htmlspecialchars($_SESSION['nama_lengkap'] ?? $_SESSION['username']); ?> [<?= htmlspecialchars($_SESSION['role']); ?>]</p>
+</div>
+<div class="container">
+    <h1>Whitelist Pegawai</h1>
+    <?php if ($success): ?>
+        <div style="padding:12px; margin-bottom:20px; background-color:#d4edda; color:#155724; border:1px solid #c3e6cb; border-radius:5px;">
+            ✓ <?= $success ?>
+        </div>
+    <?php endif; ?>
+    <?php if ($error): ?>
+        <div style="padding:12px; margin-bottom:20px; background-color:#f8d7da; color:#721c24; border:1px solid #f5c6cb; border-radius:5px;">
+            ✗ <?= $error ?>
+        </div>
+    <?php endif; ?>
+    <form method="post" style="margin-bottom:20px;">
+        <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+        <label for="nama_lengkap">Nama Lengkap:</label>
+        <input type="text" name="nama_lengkap" id="nama_lengkap" required>
+        <label for="posisi">Posisi</label>
+        <select name="posisi" id="posisi" required style="width:150px;" onchange="if(this.value==='__buat_baru__'){window.location='posisi_jabatan.php';this.selectedIndex=0;}">
+            <option value="">-- Pilih --</option>
+            <?php foreach ($posisi_jabatan as $posisi): ?>
+                <option value="<?= htmlspecialchars($posisi) ?>"><?= htmlspecialchars($posisi) ?></option>
+            <?php endforeach; ?>
+            <option value="__buat_baru__">+ Buat/Edit Posisi Baru...</option>
+        </select>
+        <label for="role">Role</label>
+        <select name="role" id="role" required style="width:100px;">
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+        </select>
+        <button type="submit">Tambah</button>
+    </form>
+    <form method="post" enctype="multipart/form-data" style="margin-bottom:20px;">
+        <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+        <label for="import_file">Import file (CSV, TXT):</label>
+        <input type="file" name="import_file" id="import_file" accept=".csv,.txt" required>
+        <button type="submit" name="import" value="1">Import</button>
+    </form>
+    <h2>Daftar Whitelist</h2>
+    <table border="1" cellpadding="6" cellspacing="0">
+        <tr>
+            <th>Nama Lengkap</th>
+            <th>Posisi</th>
+            <th>Role</th>
+            <th>Status Registrasi</th>
+            <th>Jabatan (Gaji)</th>
+            <th>Gaji Pokok</th>
+            <th>Tunjangan Transport</th>
+            <th>Tunjangan Makan</th>
+            <th>Overwork</th>
+            <th>Tunjangan Jabatan</th>
+            <th>Bonus Kehadiran</th>
+            <th>Bonus Marketing</th>
+            <th>Insentif Omset</th>
+            <th>Aksi</th>
+        </tr>
+        <?php foreach ($data as $row): ?>
+        <?php if ($edit_nama === $row['nama_lengkap']): ?>
+        <tr>
+            <form method="post" action="whitelist.php">
+            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+            <td>
+                <input type="hidden" name="old_nama_lengkap" value="<?= htmlspecialchars($row['nama_lengkap']) ?>">
+                <input type="text" name="nama_lengkap" value="<?= htmlspecialchars($row['nama_lengkap']) ?>" required style="width:140px;">
+            </td>
+            <td>
+                <select name="posisi" id="edit_posisi_dropdown" style="width:110px;" onchange="if(this.value==='__buat_baru__'){window.location='posisi_jabatan.php';}">
+                    <option value="">-- Pilih --</option>
+                    <?php foreach ($posisi_jabatan as $posisi): ?>
+                        <option value="<?= htmlspecialchars($posisi) ?>" <?= ($row['posisi'] == $posisi ? 'selected' : '') ?>><?= htmlspecialchars($posisi) ?></option>
+                    <?php endforeach; ?>
+                    <option value="__buat_baru__">+ Buat/Edit Posisi Baru...</option>
+                </select>
+            </td>
+            <td>
+                <select name="role" required style="width:90px;">
+                    <option value="user" <?= (isset($row['role']) && $row['role']==='user') ? 'selected' : '' ?>>User</option>
+                    <option value="admin" <?= (isset($row['role']) && $row['role']==='admin') ? 'selected' : '' ?>>Admin</option>
+                </select>
+            </td>
+            <td><?= htmlspecialchars($row['status_registrasi']) ?></td>
+            <td><input type="text" name="jabatan" value="<?= htmlspecialchars($row['jabatan']) ?>" style="width:100px;"></td>
+            <td><input type="number" step="0.01" name="gaji_pokok" value="<?= $row['gaji_pokok'] ?? '' ?>" style="width:90px;"></td>
+            <td><input type="number" step="0.01" name="tunjangan_transport" value="<?= $row['tunjangan_transport'] ?? '' ?>" style="width:90px;"></td>
+            <td><input type="number" step="0.01" name="tunjangan_makan" value="<?= $row['tunjangan_makan'] ?? '' ?>" style="width:90px;"></td>
+            <td><input type="number" step="0.01" name="overwork" value="<?= $row['overwork'] ?? '' ?>" style="width:90px;"></td>
+            <td><input type="number" step="0.01" name="tunjangan_jabatan" value="<?= $row['tunjangan_jabatan'] ?? '' ?>" style="width:90px;"></td>
+            <td><input type="number" step="0.01" name="bonus_kehadiran" value="<?= $row['bonus_kehadiran'] ?? '' ?>" style="width:90px;"></td>
+            <td><input type="number" step="0.01" name="bonus_marketing" value="<?= $row['bonus_marketing'] ?? '' ?>" style="width:90px;"></td>
+            <td><input type="number" step="0.01" name="insentif_omset" value="<?= $row['insentif_omset'] ?? '' ?>" style="width:90px;"></td>
+            <td>
+                <button type="submit" name="edit" value="1">Simpan</button>
+                <a href="whitelist.php">Batal</a>
+            </td>
+            </form>
+        </tr>
+        <?php else: ?>
+        <tr>
+            <td><?= htmlspecialchars($row['nama_lengkap']) ?></td>
+            <td><?= htmlspecialchars($row['posisi']) ?></td>
+            <td><?= htmlspecialchars($row['role'] ?? 'user') ?></td>
+            <td><?= htmlspecialchars($row['status_registrasi']) ?></td>
+            <td><?= htmlspecialchars($row['jabatan']) ?></td>
+            <td><?= $row['gaji_pokok'] ?? '' ?></td>
+            <td><?= $row['tunjangan_transport'] ?? '' ?></td>
+            <td><?= $row['tunjangan_makan'] ?? '' ?></td>
+            <td><?= $row['overwork'] ?? '' ?></td>
+            <td><?= $row['tunjangan_jabatan'] ?? '' ?></td>
+            <td><?= $row['bonus_kehadiran'] ?? '' ?></td>
+            <td><?= $row['bonus_marketing'] ?? '' ?></td>
+            <td><?= $row['insentif_omset'] ?? '' ?></td>
+            <td>
+                <a href="whitelist.php?edit_nama=<?=urlencode($row['nama_lengkap'])?>">Edit</a> | 
+                <a href="whitelist.php?hapus_nama=<?=urlencode($row['nama_lengkap'])?>&csrf=<?=$_SESSION['csrf_token']?>" 
+                   onclick="return confirm('Yakin hapus pegawai <?=htmlspecialchars($row['nama_lengkap'])?>?');" 
+                   style="color:red;text-decoration:none;">Hapus</a>
+            </td>
+        </tr>
+        <?php endif; ?>
+        <?php endforeach; ?>
+    </table>
+</div>
+<script>
+// Prevent form resubmission on refresh
+if (window.history.replaceState) {
+    window.history.replaceState(null, null, window.location.href);
+}
+
+// Check nama lengkap
+document.getElementById('nama_lengkap').addEventListener('blur', function() {
+    var nama = this.value.trim();
+    if (nama !== '') {
+        fetch('whitelist.php?check=1&nama=' + encodeURIComponent(nama))
+            .then(response => response.json())
+            .then(data => {
+                if (data.found) {
+                    document.getElementById('posisi').value = data.posisi;
+                    alert('Nama sudah ada di whitelist dengan status: ' + data.status);
+                } else {
+                    document.getElementById('posisi').value = '';
+                }
+            });
+    }
+});
+
+// Prevent double submit - disable button after click
+document.querySelectorAll('form').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+        var submitBtn = this.querySelector('button[type="submit"]');
+        if (submitBtn && !submitBtn.disabled) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Memproses...';
+            // Re-enable after 3 seconds as fallback
+            setTimeout(function() {
+                submitBtn.disabled = false;
+                submitBtn.textContent = submitBtn.getAttribute('data-original-text') || 'Submit';
+            }, 3000);
+        }
+    });
+});
+</script>
+</body>
+</html>
+<?php ob_end_flush(); ?>

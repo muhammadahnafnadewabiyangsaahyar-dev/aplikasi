@@ -1,6 +1,11 @@
 <?php
 session_start();
 
+// Generate CSRF token if not exists
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // 1. PENJAGA GERBANG: Pastikan pengguna sudah login
 if (!isset($_SESSION['user_id'])) {
     header('Location: index.php?error=notloggedin');
@@ -48,6 +53,15 @@ $home_url = ($_SESSION['role'] ?? '') === 'admin' ? 'mainpageadmin.php' : 'mainp
 
     <div class="content-container" style="text-align: center;">
         <p>Arahkan wajah Anda ke kamera. Sistem akan memverifikasi lokasi Anda secara otomatis.</p>
+        
+        <!-- INFO BOX: Fitur Absen Keluar Berulang -->
+        <div style="background: #E8F4FD; border: 1px solid #90CAF9; border-radius: 8px; padding: 12px 16px; margin: 16px auto; max-width: 600px; text-align: left;">
+            <p style="margin: 0; font-size: 14px; color: #1565C0;">
+                <strong>ℹ️ Info Penting:</strong> Jika Anda tidak sengaja melakukan absen keluar terlalu awal, 
+                <strong>Anda dapat absen keluar lagi</strong> untuk memperbarui waktu keluar Anda. 
+                Waktu keluar terakhir yang akan dicatat dalam sistem.
+            </p>
+        </div>
 
 <video id="kamera-preview" autoplay playsinline muted style="border: 1px solid #ccc;"></video>
 <canvas id="kamera-canvas" width="640" height="480" style="display: none; border: 1px solid #ccc;"></canvas>
@@ -55,6 +69,7 @@ $home_url = ($_SESSION['role'] ?? '') === 'admin' ? 'mainpageadmin.php' : 'mainp
 <p id="status-lokasi" class="status-message" style="color: orange;">Meminta izin akses lokasi...</p>
 
         <form id="form-absensi" method="POST" action="proses_absensi.php">
+            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
             <input type="hidden" name="latitude" id="input-latitude">
             <input type="hidden" name="longitude" id="input-longitude">
             <input type="hidden" name="foto_absensi_base64" id="input-foto-base64">

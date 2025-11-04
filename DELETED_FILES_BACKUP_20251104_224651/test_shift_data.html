@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Shift Calendar Data</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .warning { color: #ffc107; font-weight: bold; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        button { padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #5568d3; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Test Shift Calendar Data Loading</h1>
+    
+    <div class="test-section">
+        <h2>1. Session Check</h2>
+        <p>Checking if you're logged in as admin...</p>
+        <div id="session-check">Testing...</div>
+        <button onclick="testSession()">Re-test Session</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. API: Get Cabang</h2>
+        <p>Testing cabang data endpoint...</p>
+        <div id="cabang-result">Testing...</div>
+        <button onclick="testCabang()">Re-test Cabang API</button>
+        <pre id="cabang-data"></pre>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. API: Get Pegawai (for Cabang ID 1)</h2>
+        <p>Testing pegawai data endpoint...</p>
+        <div id="pegawai-result">Testing...</div>
+        <button onclick="testPegawai()">Re-test Pegawai API</button>
+        <pre id="pegawai-data"></pre>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. API: Get Assignments (November 2025)</h2>
+        <p>Testing assignments data endpoint...</p>
+        <div id="assignments-result">Testing...</div>
+        <button onclick="testAssignments()">Re-test Assignments API</button>
+        <pre id="assignments-data"></pre>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. Quick Actions</h2>
+        <button onclick="runAllTests()">🔄 Run All Tests</button>
+        <button onclick="window.open('shift_calendar.php', '_blank')">📅 Open Shift Calendar</button>
+        <button onclick="window.open('debug_shift_calendar.php', '_blank')">🐛 Open Debug Page</button>
+        <button onclick="window.location.href='login.php'">🔑 Go to Login</button>
+    </div>
+    
+    <script>
+        async function testSession() {
+            const resultDiv = document.getElementById('session-check');
+            resultDiv.innerHTML = 'Checking...';
+            
+            try {
+                const response = await fetch('api_shift_calendar.php?action=get_cabang');
+                const data = await response.json();
+                
+                if (data.status === 'error' && data.message === 'Unauthorized') {
+                    resultDiv.innerHTML = '<span class="error">❌ NOT LOGGED IN or NOT ADMIN</span><br>You must login as admin first!<br><a href="login.php">Go to Login Page</a>';
+                } else if (data.status === 'success') {
+                    resultDiv.innerHTML = '<span class="success">✅ LOGGED IN AS ADMIN</span><br>Session is valid!';
+                } else {
+                    resultDiv.innerHTML = '<span class="warning">⚠️ Unknown response: ' + JSON.stringify(data) + '</span>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<span class="error">❌ Error: ' + error.message + '</span>';
+            }
+        }
+        
+        async function testCabang() {
+            const resultDiv = document.getElementById('cabang-result');
+            const dataDiv = document.getElementById('cabang-data');
+            
+            resultDiv.innerHTML = 'Testing...';
+            dataDiv.textContent = '';
+            
+            try {
+                const response = await fetch('api_shift_calendar.php?action=get_cabang');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const count = data.data ? data.data.length : 0;
+                    resultDiv.innerHTML = `<span class="success">✅ SUCCESS</span> - Found ${count} cabang`;
+                    dataDiv.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ FAILED</span> - ${data.message}`;
+                    dataDiv.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<span class="error">❌ Error: ' + error.message + '</span>';
+            }
+        }
+        
+        async function testPegawai() {
+            const resultDiv = document.getElementById('pegawai-result');
+            const dataDiv = document.getElementById('pegawai-data');
+            
+            resultDiv.innerHTML = 'Testing...';
+            dataDiv.textContent = '';
+            
+            try {
+                const response = await fetch('api_shift_calendar.php?action=get_pegawai&cabang_id=1');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const count = data.data ? data.data.length : 0;
+                    resultDiv.innerHTML = `<span class="success">✅ SUCCESS</span> - Found ${count} pegawai`;
+                    dataDiv.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ FAILED</span> - ${data.message}`;
+                    dataDiv.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<span class="error">❌ Error: ' + error.message + '</span>';
+            }
+        }
+        
+        async function testAssignments() {
+            const resultDiv = document.getElementById('assignments-result');
+            const dataDiv = document.getElementById('assignments-data');
+            
+            resultDiv.innerHTML = 'Testing...';
+            dataDiv.textContent = '';
+            
+            try {
+                const currentMonth = '2025-11'; // November 2025
+                const response = await fetch(`api_shift_calendar.php?action=get_assignments&month=${currentMonth}&cabang_id=1`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const count = data.data ? data.data.length : 0;
+                    resultDiv.innerHTML = `<span class="success">✅ SUCCESS</span> - Found ${count} assignments`;
+                    dataDiv.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ FAILED</span> - ${data.message}`;
+                    dataDiv.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<span class="error">❌ Error: ' + error.message + '</span>';
+            }
+        }
+        
+        async function runAllTests() {
+            await testSession();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testCabang();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testPegawai();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testAssignments();
+        }
+        
+        // Auto-run tests on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            runAllTests();
+        });
+    </script>
+</body>
+</html>

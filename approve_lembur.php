@@ -68,6 +68,16 @@ $stmt_select = $pdo->prepare($sql_select);
 $stmt_select->execute();
 $result_select = $stmt_select->fetchAll(PDO::FETCH_ASSOC);
 
+// Ambil data lembur yang sudah diapprove/reject (riwayat)
+$sql_riwayat = "SELECT a.id, r.nama_lengkap, a.tanggal_absensi, a.waktu_masuk, a.waktu_keluar, a.status_lembur 
+               FROM absensi a 
+               JOIN register r ON a.user_id = r.id 
+               WHERE a.status_lembur IN ('Approved','Rejected')
+               ORDER BY a.tanggal_absensi DESC, a.id DESC";
+$stmt_riwayat = $pdo->prepare($sql_riwayat);
+$stmt_riwayat->execute();
+$result_riwayat = $stmt_riwayat->fetchAll(PDO::FETCH_ASSOC);
+
 $home_url = ($_SESSION['role'] == 'admin') ? 'mainpageadmin.php' : 'mainpageuser.php';
 ?>
 <!DOCTYPE html>
@@ -89,7 +99,6 @@ $home_url = ($_SESSION['role'] == 'admin') ? 'mainpageadmin.php' : 'mainpageuser
     <div class="content-container">
         <h2>Persetujuan Lembur (Overwork)</h2>
         <p>Di bawah ini adalah daftar pengajuan lembur yang menunggu persetujuan Anda.</p>
-        
         <div class="table-container">
             <table>
                 <thead>
@@ -127,6 +136,43 @@ $home_url = ($_SESSION['role'] == 'admin') ? 'mainpageadmin.php' : 'mainpageuser
                     <?php else: ?>
                         <tr>
                             <td colspan="5" style="text-align: center;">Tidak ada pengajuan lembur yang menunggu persetujuan.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <h2 style="margin-top:40px;">Riwayat Persetujuan Lembur</h2>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nama Karyawan</th>
+                        <th>Tanggal Absen</th>
+                        <th>Jam Masuk</th>
+                        <th>Jam Keluar</th>
+                        <th>Status Lembur</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (count($result_riwayat) > 0): ?>
+                        <?php foreach ($result_riwayat as $row): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($row['nama_lengkap']) ?></td>
+                                <td><?= htmlspecialchars($row['tanggal_absensi']) ?></td>
+                                <td><?= htmlspecialchars(date('H:i:s', strtotime($row['waktu_masuk']))) ?></td>
+                                <td><?= htmlspecialchars(date('H:i:s', strtotime($row['waktu_keluar']))) ?></td>
+                                <td>
+                                    <?php if ($row['status_lembur'] === 'Approved'): ?>
+                                        <span style="color:green;font-weight:bold;">Approved</span>
+                                    <?php elseif ($row['status_lembur'] === 'Rejected'): ?>
+                                        <span style="color:red;font-weight:bold;">Rejected</span>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="5" style="text-align: center;">Belum ada riwayat persetujuan lembur.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>

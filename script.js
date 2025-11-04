@@ -13,10 +13,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const signupNama = document.getElementById('signup_nama');
     const signupPosisi = document.getElementById('signup_posisi');
 
-    // Clear all form inputs on page load
+    // Clear all form inputs on page load (KECUALI no_wa)
     const allInputs = document.querySelectorAll('input');
     allInputs.forEach(input => {
-        input.value = '';
+        // Jangan clear field no_wa atau field readonly
+        if (input.id !== 'no_wa' && !input.hasAttribute('readonly')) {
+            input.value = '';
+        }
         input.setAttribute('autocomplete', 'off');
         
         // Add input event listener to handle label visibility

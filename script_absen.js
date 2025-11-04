@@ -108,8 +108,25 @@ document.addEventListener("DOMContentLoaded", () => {
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         
         // Konversi gambar di canvas ke format data URL (Base64)
-        // Gunakan 'image/jpeg' untuk ukuran file yang lebih kecil
-        return canvas.toDataURL('image/jpeg', 0.8); // Kualitas 80%
+        // Mulai dengan kualitas 80%
+        let base64 = canvas.toDataURL('image/jpeg', 0.8);
+        
+        // Check size - jika terlalu besar, compress lebih lanjut
+        let sizeBytes = (base64.length * 0.75); // Rough estimate
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        
+        if (sizeBytes > maxSize) {
+            // Coba kualitas 60%
+            base64 = canvas.toDataURL('image/jpeg', 0.6);
+            sizeBytes = (base64.length * 0.75);
+            
+            if (sizeBytes > maxSize) {
+                // Coba kualitas 40% (last resort)
+                base64 = canvas.toDataURL('image/jpeg', 0.4);
+            }
+        }
+        
+        return base64;
     }
 
     // --- Fungsi Utama 4: Menghentikan Kamera ---
@@ -134,6 +151,13 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (statusAbsen === 'sudah_masuk') {
             btnAbsenMasuk.disabled = true;
             btnAbsenKeluar.disabled = false;
+        } else if (statusAbsen === 'sudah_keluar') {
+            // FIX: ALLOW MULTIPLE ABSEN KELUAR
+            // User yang sudah absen keluar tetap bisa absen keluar lagi untuk update waktu
+            btnAbsenMasuk.disabled = true;
+            btnAbsenKeluar.disabled = false; // Aktifkan tombol keluar lagi
+            btnAbsenKeluar.textContent = 'Update Absen Keluar';
+            btnAbsenKeluar.style.background = '#FF9800'; // Warna berbeda untuk update
         } else {
             btnAbsenMasuk.disabled = true;
             btnAbsenKeluar.disabled = true;
@@ -195,34 +219,51 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
                 const result = await response.json();
                 if (result.status === 'success') {
-                    // Tampilkan modal konfirmasi lembur
-                    document.getElementById('modal-lembur').style.display = 'flex';
-                    // Simpan absen_id jika ada
-                    let absenId = result.absen_id ? result.absen_id : '';
-                    // Handler tombol modal
-                    document.getElementById('btn-lembur-ya').onclick = function() {
-                        if (absenId) {
-                            window.location.href = 'konfirmasi_lembur.php?absen_id=' + encodeURIComponent(absenId);
-                        } else {
-                            window.location.href = 'konfirmasi_lembur.php';
+                    // Cek apakah ada pesan custom (untuk update absen keluar)
+                    if (result.message) {
+                        statusLokasi.textContent = result.message;
+                    }
+                    
+                    // Jika next = konfirmasi_lembur, tampilkan modal
+                    if (result.next === 'konfirmasi_lembur') {
+                        // Tampilkan modal konfirmasi lembur
+                        document.getElementById('modal-lembur').style.display = 'flex';
+                        // Simpan absen_id jika ada
+                        let absenId = result.absen_id ? result.absen_id : '';
+                        // Handler tombol modal
+                        document.getElementById('btn-lembur-ya').onclick = function() {
+                            if (absenId) {
+                                window.location.href = 'konfirmasi_lembur.php?absen_id=' + encodeURIComponent(absenId);
+                            } else {
+                                window.location.href = 'konfirmasi_lembur.php';
+                            }
+                        };
+                        document.getElementById('btn-lembur-tidak').onclick = function() {
+                            window.location.href = 'absen.php';
+                        };
+                    } else if (result.next === 'done') {
+                        // Absen keluar selesai tanpa lembur
+                        btnAbsenKeluar.innerHTML = '✓ Selesai';
+                        btnAbsenKeluar.disabled = false; // Tetap aktifkan untuk update lagi
+                        btnAbsenKeluar.style.background = '#4CAF50'; // Hijau untuk selesai
+                        
+                        // Jika ini update (ada message), tunjukkan pesan
+                        if (!result.message) {
+                            statusLokasi.textContent = 'Absensi hari ini selesai. Terima kasih!';
                         }
-                    };
-                    document.getElementById('btn-lembur-tidak').onclick = function() {
-                        window.location.href = 'absen.php';
-                    };
+                        
+                        // Jangan stop kamera agar bisa update lagi
+                        // stopCamera();
+                    }
+                    
                     btnAbsenKeluar.innerHTML = 'Absen Keluar';
-                    btnAbsenKeluar.disabled = true;
-                    statusLokasi.textContent = 'Absensi hari ini sudah selesai.';
-                    stopCamera();
                 } else if (result.status === 'error' && (result.message === 'Not logged in' || result.message.toLowerCase().includes('unauthorized'))) {
                     alert('Sesi Anda telah habis. Silakan login kembali.');
                     window.location.href = 'index.php?error=notloggedin';
-                } else if (result.next === 'konfirmasi_lembur' && result.absen_id) {
-                    window.location.href = 'konfirmasi_lembur.php?absen_id=' + encodeURIComponent(result.absen_id);
-                    return;
                 } else {
                     alert(result.message || 'Terjadi error.');
-                    window.location.reload();
+                    btnAbsenKeluar.disabled = false; // Re-enable untuk coba lagi
+                    btnAbsenKeluar.innerHTML = 'Absen Keluar';
                 }
             } catch (e) {
                 alert('Gagal mengirim absensi. Silakan coba lagi.');

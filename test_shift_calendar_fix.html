@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Shift Calendar Fix</title>
+    <style>
+        body {
+            font-family: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-card h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .status.pass {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.fail {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .test-step {
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 3px solid #ddd;
+            background: #f9f9f9;
+        }
+        .test-step.pass {
+            border-left-color: #28a745;
+        }
+        .test-step.fail {
+            border-left-color: #dc3545;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .console-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Shift Calendar - Test Suite</h1>
+    
+    <div class="test-card">
+        <h2>1️⃣ JavaScript Library Check</h2>
+        <div id="test-lib" class="test-step pending">
+            <strong>Testing...</strong>
+        </div>
+        <button class="btn-primary" onclick="runTest1()">Run Test</button>
+    </div>
+    
+    <div class="test-card">
+        <h2>2️⃣ API Endpoints Check</h2>
+        <div id="test-api" class="test-step pending">
+            <strong>Testing...</strong>
+        </div>
+        <button class="btn-primary" onclick="runTest2()">Run Test</button>
+    </div>
+    
+    <div class="test-card">
+        <h2>3️⃣ DOM Elements Check</h2>
+        <div id="test-dom" class="test-step pending">
+            <strong>Testing...</strong>
+        </div>
+        <button class="btn-primary" onclick="runTest3()">Run Test</button>
+    </div>
+    
+    <div class="test-card">
+        <h2>4️⃣ DayPilot Initialization Check</h2>
+        <div id="test-daypilot" class="test-step pending">
+            <strong>Testing...</strong>
+        </div>
+        <button class="btn-primary" onclick="runTest4()">Run Test</button>
+    </div>
+    
+    <div class="test-card">
+        <h2>📊 Console Output</h2>
+        <div id="console-output" class="console-output">
+            Waiting for tests to run...
+        </div>
+    </div>
+    
+    <div class="test-card">
+        <h2>🚀 Quick Actions</h2>
+        <button class="btn-success" onclick="runAllTests()">▶ Run All Tests</button>
+        <button class="btn-primary" onclick="openShiftCalendar()">📅 Open Shift Calendar</button>
+        <button class="btn-danger" onclick="clearConsole()">🗑️ Clear Console</button>
+    </div>
+    
+    <script>
+        let consoleLog = [];
+        
+        // Override console.log to capture output
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            consoleLog.push(args.join(' '));
+            updateConsoleOutput();
+        };
+        
+        function updateConsoleOutput() {
+            const output = document.getElementById('console-output');
+            output.innerHTML = consoleLog.map(line => `<div>${line}</div>`).join('');
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        function clearConsole() {
+            consoleLog = [];
+            updateConsoleOutput();
+        }
+        
+        function setTestStatus(elementId, status, message) {
+            const element = document.getElementById(elementId);
+            element.className = `test-step ${status}`;
+            element.innerHTML = `<strong>${status.toUpperCase()}:</strong> ${message}`;
+        }
+        
+        // Test 1: Check if JavaScript libraries are loaded
+        function runTest1() {
+            console.log('=== Test 1: JavaScript Library Check ===');
+            
+            try {
+                // Check if DayPilot is loaded
+                if (typeof DayPilot === 'undefined') {
+                    setTestStatus('test-lib', 'fail', 'DayPilot library not loaded!');
+                    console.log('❌ DayPilot not found');
+                    return;
+                }
+                
+                console.log('✅ DayPilot loaded');
+                console.log('   Version:', DayPilot.v || 'Unknown');
+                
+                // Check if DayPilot.Date exists
+                if (typeof DayPilot.Date === 'undefined') {
+                    setTestStatus('test-lib', 'fail', 'DayPilot.Date not available!');
+                    console.log('❌ DayPilot.Date not found');
+                    return;
+                }
+                
+                console.log('✅ DayPilot.Date available');
+                
+                // Check if DayPilot.Scheduler exists
+                if (typeof DayPilot.Scheduler === 'undefined') {
+                    setTestStatus('test-lib', 'fail', 'DayPilot.Scheduler not available!');
+                    console.log('❌ DayPilot.Scheduler not found');
+                    return;
+                }
+                
+                console.log('✅ DayPilot.Scheduler available');
+                
+                setTestStatus('test-lib', 'pass', 'All JavaScript libraries loaded successfully!');
+                console.log('✅ Test 1 PASSED\n');
+            } catch (error) {
+                setTestStatus('test-lib', 'fail', `Error: ${error.message}`);
+                console.log('❌ Test 1 FAILED:', error);
+            }
+        }
+        
+        // Test 2: Check API endpoints
+        async function runTest2() {
+            console.log('=== Test 2: API Endpoints Check ===');
+            
+            try {
+                // Test get_cabang endpoint
+                console.log('Testing: api_shift_calendar.php?action=get_cabang');
+                const responseCabang = await fetch('api_shift_calendar.php?action=get_cabang');
+                const dataCabang = await responseCabang.json();
+                
+                if (dataCabang.status !== 'success') {
+                    setTestStatus('test-api', 'fail', 'get_cabang endpoint failed!');
+                    console.log('❌ get_cabang failed:', dataCabang.message);
+                    return;
+                }
+                
+                console.log('✅ get_cabang endpoint OK');
+                console.log('   Cabang count:', dataCabang.data.length);
+                
+                // Test get_pegawai endpoint
+                if (dataCabang.data.length > 0) {
+                    const cabangId = dataCabang.data[0].id;
+                    console.log(`Testing: api_shift_calendar.php?action=get_pegawai&cabang_id=${cabangId}`);
+                    const responsePegawai = await fetch(`api_shift_calendar.php?action=get_pegawai&cabang_id=${cabangId}`);
+                    const dataPegawai = await responsePegawai.json();
+                    
+                    if (dataPegawai.status !== 'success') {
+                        setTestStatus('test-api', 'fail', 'get_pegawai endpoint failed!');
+                        console.log('❌ get_pegawai failed:', dataPegawai.message);
+                        return;
+                    }
+                    
+                    console.log('✅ get_pegawai endpoint OK');
+                    console.log('   Pegawai count:', dataPegawai.data.length);
+                    
+                    // Test get_assignments endpoint
+                    const currentMonth = new Date().toISOString().substring(0, 7);
+                    console.log(`Testing: api_shift_calendar.php?action=get_assignments&month=${currentMonth}&cabang_id=${cabangId}`);
+                    const responseAssignments = await fetch(`api_shift_calendar.php?action=get_assignments&month=${currentMonth}&cabang_id=${cabangId}`);
+                    const dataAssignments = await responseAssignments.json();
+                    
+                    if (dataAssignments.status !== 'success') {
+                        setTestStatus('test-api', 'fail', 'get_assignments endpoint failed!');
+                        console.log('❌ get_assignments failed:', dataAssignments.message);
+                        return;
+                    }
+                    
+                    console.log('✅ get_assignments endpoint OK');
+                    console.log('   Assignments count:', dataAssignments.data.length);
+                }
+                
+                setTestStatus('test-api', 'pass', 'All API endpoints working correctly!');
+                console.log('✅ Test 2 PASSED\n');
+            } catch (error) {
+                setTestStatus('test-api', 'fail', `Error: ${error.message}`);
+                console.log('❌ Test 2 FAILED:', error);
+            }
+        }
+        
+        // Test 3: Check DOM elements (simulated - actual check must be on shift_calendar.php page)
+        function runTest3() {
+            console.log('=== Test 3: DOM Elements Check ===');
+            console.log('⚠️  This test should be run on shift_calendar.php page');
+            console.log('   Required elements:');
+            console.log('   - #month-selector (input[type=month])');
+            console.log('   - #filter-cabang-cal (select)');
+            console.log('   - #dp (div for DayPilot)');
+            console.log('   - #legend-colors (div for legend)');
+            setTestStatus('test-dom', 'pending', 'Run this test on shift_calendar.php page (use browser console)');
+            console.log('ℹ️  Test 3 SKIPPED (run on actual page)\n');
+        }
+        
+        // Test 4: Test DayPilot initialization (simulated)
+        function runTest4() {
+            console.log('=== Test 4: DayPilot Initialization Check ===');
+            
+            try {
+                if (typeof DayPilot === 'undefined') {
+                    setTestStatus('test-daypilot', 'fail', 'DayPilot not loaded!');
+                    console.log('❌ DayPilot not loaded');
+                    return;
+                }
+                
+                // Try to create a DayPilot Date object
+                const testDate = new DayPilot.Date('2025-01-01');
+                console.log('✅ DayPilot.Date constructor works');
+                console.log('   Test date:', testDate.toString('yyyy-MM-dd'));
+                
+                // Check daysInMonth method
+                const daysInMonth = testDate.daysInMonth();
+                console.log('✅ daysInMonth() method works');
+                console.log('   Days in Jan 2025:', daysInMonth);
+                
+                setTestStatus('test-daypilot', 'pass', 'DayPilot initialization methods working correctly!');
+                console.log('✅ Test 4 PASSED\n');
+            } catch (error) {
+                setTestStatus('test-daypilot', 'fail', `Error: ${error.message}`);
+                console.log('❌ Test 4 FAILED:', error);
+            }
+        }
+        
+        // Run all tests
+        async function runAllTests() {
+            clearConsole();
+            console.log('🚀 Running all tests...\n');
+            
+            runTest1();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await runTest2();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            runTest3();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            runTest4();
+            
+            console.log('\n✅ All tests completed!');
+            console.log('Next: Open shift_calendar.php and check browser console');
+        }
+        
+        // Open shift calendar in new tab
+        function openShiftCalendar() {
+            window.open('shift_calendar.php', '_blank');
+        }
+        
+        // Load DayPilot library
+        const script = document.createElement('script');
+        script.src = 'daypilot-all.min.js';
+        script.onload = () => {
+            console.log('DayPilot library loaded');
+        };
+        script.onerror = () => {
+            console.log('❌ Failed to load DayPilot library');
+        };
+        document.head.appendChild(script);
+    </script>
+</body>
+</html>

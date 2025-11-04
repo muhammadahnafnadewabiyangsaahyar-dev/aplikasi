@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Demo Filter & Format Rupiah</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #4CAF50;
+        }
+        /* Style untuk search box */
+        #searchInput {
+            width: 100%;
+            max-width: 500px;
+            padding: 10px 15px;
+            font-size: 14px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            transition: border-color 0.3s;
+            margin-bottom: 15px;
+        }
+        #searchInput:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+        }
+        /* Style untuk tabel */
+        #demoTable {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        #demoTable th {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: bold;
+        }
+        #demoTable td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .data-row:hover {
+            background-color: #f5f5f5;
+        }
+        .currency {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+            color: #2e7d32;
+            font-weight: 500;
+        }
+        .info-box {
+            background-color: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Demo Filter & Format Rupiah</h1>
+    
+    <div class="info-box">
+        <strong>Fitur:</strong>
+        <ul>
+            <li>✅ Search/Filter real-time di semua kolom</li>
+            <li>✅ Format Rupiah untuk komponen gaji</li>
+            <li>✅ Hover effect pada baris tabel</li>
+            <li>✅ Focus effect pada search box</li>
+        </ul>
+        <strong>Cara Pakai:</strong> Ketik di search box untuk filter data (contoh: "Manager", "Admin", "5.000.000")
+    </div>
+    
+    <input type="text" id="searchInput" placeholder="🔍 Cari di semua kolom...">
+    
+    <table id="demoTable" border="1">
+        <thead>
+            <tr>
+                <th>Nama Lengkap</th>
+                <th>Posisi</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Gaji Pokok</th>
+                <th>Tunjangan Transport</th>
+                <th>Tunjangan Makan</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="data-row">
+                <td>Budi Santoso</td>
+                <td>Manager</td>
+                <td>admin</td>
+                <td>terdaftar</td>
+                <td class="currency">Rp 8.000.000</td>
+                <td class="currency">Rp 1.000.000</td>
+                <td class="currency">Rp 750.000</td>
+            </tr>
+            <tr class="data-row">
+                <td>Ani Wijaya</td>
+                <td>Staff Marketing</td>
+                <td>user</td>
+                <td>terdaftar</td>
+                <td class="currency">Rp 5.000.000</td>
+                <td class="currency">Rp 500.000</td>
+                <td class="currency">Rp 500.000</td>
+            </tr>
+            <tr class="data-row">
+                <td>Citra Dewi</td>
+                <td>Supervisor</td>
+                <td>user</td>
+                <td>terdaftar</td>
+                <td class="currency">Rp 6.500.000</td>
+                <td class="currency">Rp 750.000</td>
+                <td class="currency">Rp 600.000</td>
+            </tr>
+            <tr class="data-row">
+                <td>Doni Prasetyo</td>
+                <td>Staff Admin</td>
+                <td>user</td>
+                <td>pending</td>
+                <td class="currency">Rp 4.500.000</td>
+                <td class="currency">Rp 400.000</td>
+                <td class="currency">Rp 450.000</td>
+            </tr>
+            <tr class="data-row">
+                <td>Eka Putri</td>
+                <td>Manager HRD</td>
+                <td>admin</td>
+                <td>terdaftar</td>
+                <td class="currency">Rp 9.000.000</td>
+                <td class="currency">Rp 1.200.000</td>
+                <td class="currency">Rp 800.000</td>
+            </tr>
+            <tr class="data-row">
+                <td>Fajar Ahmad</td>
+                <td>Staff IT</td>
+                <td>user</td>
+                <td>terdaftar</td>
+                <td class="currency">Rp 5.500.000</td>
+                <td class="currency">Rp 600.000</td>
+                <td class="currency">Rp 550.000</td>
+            </tr>
+            <tr class="data-row">
+                <td>Gita Sari</td>
+                <td>Staff Finance</td>
+                <td>user</td>
+                <td>pending</td>
+                <td class="currency">Rp 5.000.000</td>
+                <td class="currency">Rp 500.000</td>
+                <td class="currency">Rp 500.000</td>
+            </tr>
+            <tr class="data-row">
+                <td>Hendra Kusuma</td>
+                <td>Direktur</td>
+                <td>admin</td>
+                <td>terdaftar</td>
+                <td class="currency">Rp 15.000.000</td>
+                <td class="currency">Rp 2.000.000</td>
+                <td class="currency">Rp 1.000.000</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <div style="margin-top: 20px; padding: 10px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 5px;">
+        <strong>💡 Tips:</strong>
+        <ul>
+            <li>Coba ketik "Manager" untuk filter semua manager</li>
+            <li>Coba ketik "admin" untuk filter role admin</li>
+            <li>Coba ketik "pending" untuk filter status pending</li>
+            <li>Coba ketik "5.000.000" untuk filter gaji tertentu</li>
+            <li>Hapus search untuk tampilkan semua data</li>
+        </ul>
+    </div>
+    
+    <script>
+        // Filter/Search functionality
+        document.getElementById('searchInput').addEventListener('keyup', function() {
+            var searchValue = this.value.toLowerCase().trim();
+            var table = document.getElementById('demoTable');
+            var rows = table.getElementsByClassName('data-row');
+            var visibleCount = 0;
+            
+            for (var i = 0; i < rows.length; i++) {
+                var row = rows[i];
+                var cells = row.getElementsByTagName('td');
+                var found = false;
+                
+                // Search in all cells
+                for (var j = 0; j < cells.length; j++) {
+                    var cellText = cells[j].textContent || cells[j].innerText;
+                    if (cellText.toLowerCase().indexOf(searchValue) > -1) {
+                        found = true;
+                        break;
+                    }
+                }
+                
+                if (found || searchValue === '') {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            }
+            
+            // Show message if no results found
+            var noResultsRow = document.getElementById('noResultsRow');
+            if (noResultsRow) {
+                noResultsRow.remove();
+            }
+            
+            if (visibleCount === 0 && searchValue !== '') {
+                var tbody = table.getElementsByTagName('tbody')[0];
+                var newRow = tbody.insertRow();
+                newRow.id = 'noResultsRow';
+                var cell = newRow.insertCell(0);
+                cell.colSpan = 7;
+                cell.innerHTML = '<em style="color: #999;">Tidak ada data yang cocok dengan pencarian "' + searchValue + '"</em>';
+                cell.style.textAlign = 'center';
+                cell.style.padding = '20px';
+            }
+        });
+    </script>
+</body>
+</html>
