@@ -18,8 +18,12 @@ $bulan = isset($_GET['bulan']) ? (int)$_GET['bulan'] : (int)date('m');
 $tahun = isset($_GET['tahun']) ? (int)$_GET['tahun'] : (int)date('Y');
 
 // --- Query absensi bulanan ---
+// FIX: Update query untuk menggunakan foto_absen_masuk dan foto_absen_keluar
 $sql_absensi = "SELECT a.id, a.tanggal_absensi, a.waktu_masuk, a.waktu_keluar, a.status_lokasi, 
-                       a.foto_absen, a.menit_terlambat, a.status_keterlambatan, a.potongan_tunjangan,
+                       a.foto_absen_masuk, a.foto_absen_keluar, 
+                       a.latitude_absen_masuk, a.longitude_absen_masuk,
+                       a.latitude_absen_keluar, a.longitude_absen_keluar,
+                       a.menit_terlambat, a.status_keterlambatan, a.potongan_tunjangan,
                        a.status_lembur, a.user_id, r.nama_lengkap, c.jam_keluar 
                 FROM absensi a 
                 JOIN register r ON a.user_id = r.id 
@@ -70,9 +74,10 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     header('Content-Type: text/csv');
     header('Content-Disposition: attachment; filename="riwayat_absensi_' . $bulan_csv . '_' . $tahun_csv . '.csv"');
     $output = fopen('php://output', 'w');
-    // Header kolom
+    // Header kolom - FIX: Pisahkan foto masuk dan keluar
     fputcsv($output, ['ID', 'Nama Lengkap', 'Tanggal Absensi', 'Waktu Masuk', 'Waktu Keluar', 
-                      'Status Lokasi', 'Foto Absen', 'Menit Terlambat', 'Status Keterlambatan', 'Potongan Tunjangan', 'Status Kehadiran']);
+                      'Status Lokasi', 'Foto Masuk', 'Foto Keluar', 'Lat Masuk', 'Lng Masuk', 'Lat Keluar', 'Lng Keluar',
+                      'Menit Terlambat', 'Status Keterlambatan', 'Potongan Tunjangan', 'Status Kehadiran']);
     foreach ($daftar_absensi as $absensi) {
         fputcsv($output, [
             $absensi['id'],
@@ -81,7 +86,12 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
             $absensi['waktu_masuk'],
             $absensi['waktu_keluar'],
             $absensi['status_lokasi'],
-            $absensi['foto_absen'],
+            $absensi['foto_absen_masuk'] ?? '-',
+            $absensi['foto_absen_keluar'] ?? '-',
+            $absensi['latitude_absen_masuk'] ?? '-',
+            $absensi['longitude_absen_masuk'] ?? '-',
+            $absensi['latitude_absen_keluar'] ?? '-',
+            $absensi['longitude_absen_keluar'] ?? '-',
             $absensi['menit_terlambat'] ?? 0,
             $absensi['status_keterlambatan'] ?? 'tepat waktu',
             $absensi['potongan_tunjangan'] ?? 'tidak ada',
@@ -96,8 +106,12 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv_user' && isset($_GET['nam
     $nama_user = $_GET['nama'];
     $bulan_csv = isset($_GET['bulan']) ? (int)$_GET['bulan'] : (int)date('m');
     $tahun_csv = isset($_GET['tahun']) ? (int)$_GET['tahun'] : (int)date('Y');
+    // FIX: Update query untuk foto masuk dan keluar terpisah
     $sql_user = "SELECT a.id, a.tanggal_absensi, a.waktu_masuk, a.waktu_keluar, a.status_lokasi, 
-                        a.foto_absen, a.menit_terlambat, a.status_keterlambatan, a.potongan_tunjangan,
+                        a.foto_absen_masuk, a.foto_absen_keluar,
+                        a.latitude_absen_masuk, a.longitude_absen_masuk,
+                        a.latitude_absen_keluar, a.longitude_absen_keluar,
+                        a.menit_terlambat, a.status_keterlambatan, a.potongan_tunjangan,
                         a.user_id, r.nama_lengkap 
                 FROM absensi a 
                 JOIN register r ON a.user_id = r.id 
@@ -115,8 +129,10 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv_user' && isset($_GET['nam
     header('Content-Type: text/csv');
     header('Content-Disposition: attachment; filename="absensi_' . urlencode($nama_user) . '_' . $bulan_csv . '_' . $tahun_csv . '.csv"');
     $output = fopen('php://output', 'w');
+    // FIX: Pisahkan foto masuk dan keluar
     fputcsv($output, ['ID', 'Nama Lengkap', 'Tanggal Absensi', 'Waktu Masuk', 'Waktu Keluar', 
-                      'Status Lokasi', 'Foto Absen', 'Menit Terlambat', 'Status Keterlambatan', 'Potongan Tunjangan', 'Status Kehadiran']);
+                      'Status Lokasi', 'Foto Masuk', 'Foto Keluar', 'Lat Masuk', 'Lng Masuk', 'Lat Keluar', 'Lng Keluar',
+                      'Menit Terlambat', 'Status Keterlambatan', 'Potongan Tunjangan', 'Status Kehadiran']);
     foreach ($absensi_user as $absensi) {
         fputcsv($output, [
             $absensi['id'],
@@ -125,12 +141,16 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv_user' && isset($_GET['nam
             $absensi['waktu_masuk'],
             $absensi['waktu_keluar'],
             $absensi['status_lokasi'],
-            $absensi['foto_absen'],
+            $absensi['foto_absen_masuk'] ?? '-',
+            $absensi['foto_absen_keluar'] ?? '-',
+            $absensi['latitude_absen_masuk'] ?? '-',
+            $absensi['longitude_absen_masuk'] ?? '-',
+            $absensi['latitude_absen_keluar'] ?? '-',
+            $absensi['longitude_absen_keluar'] ?? '-',
             $absensi['menit_terlambat'] ?? 0,
             $absensi['status_keterlambatan'] ?? 'tepat waktu',
             $absensi['potongan_tunjangan'] ?? 'tidak ada',
-            $absensi['status_kehadiran_calculated'] ?? 'Belum Absen Keluar',
-            $absensi['potongan_tunjangan'] ?? 'tidak ada'
+            $absensi['status_kehadiran_calculated'] ?? 'Belum Absen Keluar'
         ]);
     }
     fclose($output);
@@ -224,7 +244,8 @@ sort($daftar_nama_harian);
                         <th>Waktu Masuk</th>
                         <th>Waktu Keluar</th>
                         <th>Status Lokasi</th>
-                        <th>Foto Absen</th>
+                        <th>Foto Masuk</th>
+                        <th>Foto Keluar</th>
                         <th>Status Keterlambatan</th>
                         <th>Potongan Tunjangan</th>
                         <th>Status Kehadiran</th>
@@ -239,18 +260,33 @@ sort($daftar_nama_harian);
                         <td><?php echo htmlspecialchars($absensi['nama_lengkap']); ?></td>
                         <td><?php echo htmlspecialchars($absensi['tanggal_absensi']); ?></td>
                         <td><?php echo htmlspecialchars($absensi['waktu_masuk']); ?></td>
-                        <td><?php echo htmlspecialchars($absensi['waktu_keluar']); ?></td>
+                        <td><?php echo htmlspecialchars($absensi['waktu_keluar'] ?? '-'); ?></td>
                         <td><?php echo htmlspecialchars($absensi['status_lokasi']); ?></td>
+                        <!-- FIX: Pisahkan foto masuk dan keluar -->
                         <td>
-                            <?php if (!empty($absensi['foto_absen'])): ?>
+                            <?php if (!empty($absensi['foto_absen_masuk'])): ?>
                                 <?php
-                                $foto = htmlspecialchars($absensi['foto_absen']);
-                                // FIX: Semua foto sekarang di uploads/absensi/
-                                $path_foto = 'uploads/absensi/' . $foto;
+                                $foto_masuk = htmlspecialchars($absensi['foto_absen_masuk']);
+                                $path_foto_masuk = 'uploads/absensi/' . $foto_masuk;
                                 ?>
-                                <img src="<?php echo $path_foto; ?>" alt="Foto Absen Masuk" style="max-width: 100px; max-height: 100px;">
+                                <a href="<?php echo $path_foto_masuk; ?>" target="_blank">
+                                    <img src="<?php echo $path_foto_masuk; ?>" alt="Foto Masuk" style="max-width: 60px; max-height: 60px; cursor: pointer;">
+                                </a>
                             <?php else: ?>
-                                Tidak ada foto
+                                Tidak ada foto masuk
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if (!empty($absensi['foto_absen_keluar'])): ?>
+                                <?php
+                                $foto_keluar = htmlspecialchars($absensi['foto_absen_keluar']);
+                                $path_foto_keluar = 'uploads/absensi/' . $foto_keluar;
+                                ?>
+                                <a href="<?php echo $path_foto_keluar; ?>" target="_blank">
+                                    <img src="<?php echo $path_foto_keluar; ?>" alt="Foto Keluar" style="max-width: 60px; max-height: 60px; cursor: pointer;">
+                                </a>
+                            <?php else: ?>
+                                <?php echo !empty($absensi['waktu_keluar']) ? 'Tidak ada foto keluar' : '-'; ?>
                             <?php endif; ?>
                         </td>
                         <td>

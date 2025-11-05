@@ -66,7 +66,8 @@ foreach ($daftar_absensi as &$absen) {
                     <th>Waktu Masuk</th>
                     <th>Waktu Keluar</th>
                     <th>Status Lokasi</th>
-                    <th>Foto Absen</th>
+                    <th>Foto Absen Masuk</th>
+                    <th>Foto Absen Keluar</th>
                     <th>Status Keterlambatan</th>
                     <th>Potongan Tunjangan</th>
                     <th>Status Kehadiran</th>
@@ -76,7 +77,7 @@ foreach ($daftar_absensi as &$absen) {
             <tbody>
                 <?php if (empty($daftar_absensi)): ?>
                     <tr>
-                        <td colspan="9">Tidak ada data absensi.</td>
+                        <td colspan="10">Tidak ada data absensi.</td>
                     </tr>
                 <?php else: ?>
                     <?php foreach ($daftar_absensi as $absen): ?>
@@ -85,20 +86,39 @@ foreach ($daftar_absensi as &$absen) {
                             <td><?php echo htmlspecialchars(date('H:i', strtotime($absen['waktu_masuk']))); ?></td>
                             <td><?php echo htmlspecialchars($absen['waktu_keluar'] ? date('H:i', strtotime($absen['waktu_keluar'])) : '-'); ?></td>
                             <td><?php echo htmlspecialchars($absen['status_lokasi']); ?></td>
+                            <!-- Foto Absen Masuk -->
                             <td>
                                 <?php
-                                $foto = htmlspecialchars($absen['foto_absen']);
-                                $path_foto = '';
-                                if (!empty($foto)) {
-                                    // FIX: Semua foto sekarang di uploads/absensi/
-                                    $path_foto = 'uploads/absensi/' . $foto;
-                                    if (file_exists($path_foto)) {
-                                        echo '<img src="' . $path_foto . '" alt="Foto Absen Masuk" class="foto-absen" style="max-width: 50px; height: auto;">';
+                                $foto_masuk = $absen['foto_absen_masuk'] ?? '';
+                                if (!empty($foto_masuk)) {
+                                    $path_foto_masuk = 'uploads/absensi/' . $foto_masuk;
+                                    if (file_exists($path_foto_masuk)) {
+                                        echo '<a href="' . $path_foto_masuk . '" target="_blank">';
+                                        echo '<img src="' . $path_foto_masuk . '" alt="Foto Absen Masuk" class="foto-absen" style="max-width: 60px; height: auto; cursor: pointer;">';
+                                        echo '</a>';
                                     } else {
-                                        echo '(File tidak ditemukan)';
+                                        echo '<span style="color: #999;">(File tidak ditemukan)</span>';
                                     }
                                 } else {
-                                    echo '(Tidak ada foto)';
+                                    echo '<span style="color: #999;">-</span>';
+                                }
+                                ?>
+                            </td>
+                            <!-- Foto Absen Keluar -->
+                            <td>
+                                <?php
+                                $foto_keluar = $absen['foto_absen_keluar'] ?? '';
+                                if (!empty($foto_keluar)) {
+                                    $path_foto_keluar = 'uploads/absensi/' . $foto_keluar;
+                                    if (file_exists($path_foto_keluar)) {
+                                        echo '<a href="' . $path_foto_keluar . '" target="_blank">';
+                                        echo '<img src="' . $path_foto_keluar . '" alt="Foto Absen Keluar" class="foto-absen" style="max-width: 60px; height: auto; cursor: pointer;">';
+                                        echo '</a>';
+                                    } else {
+                                        echo '<span style="color: #999;">(File tidak ditemukan)</span>';
+                                    }
+                                } else {
+                                    echo '<span style="color: #999;">-</span>';
                                 }
                                 ?>
                             </td>

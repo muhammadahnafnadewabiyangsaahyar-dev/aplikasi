@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Jadwal Shift</title>
+    <link rel="stylesheet" href="style_jadwal_shift.css">
+    <style>
+        body {
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .debug-info {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .debug-info h3 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        .debug-info pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-info">
+        <h3>🔍 Debug Information</h3>
+        <p id="status">Loading...</p>
+    </div>
+
+    <div class="shift-container">
+        <div class="header">
+            <h1>📅 Test Kalender</h1>
+            <p>Testing calendar generation</p>
+        </div>
+        
+        <div class="calendar-controls">
+            <button id="prev-month">← Previous</button>
+            <h2 id="current-month-year"></h2>
+            <button id="next-month">Next →</button>
+        </div>
+        
+        <div class="calendar-wrapper">
+            <table class="calendar-table">
+                <thead>
+                    <tr>
+                        <th>Minggu</th>
+                        <th>Senin</th>
+                        <th>Selasa</th>
+                        <th>Rabu</th>
+                        <th>Kamis</th>
+                        <th>Jumat</th>
+                        <th>Sabtu</th>
+                    </tr>
+                </thead>
+                <tbody id="calendar-body">
+                    <tr><td colspan="7">Calendar will be generated here...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Test data
+        const shiftsData = {
+            '2025-11-05': {
+                id: 1,
+                tanggal_shift: '2025-11-05',
+                nama_cabang: 'Test Cabang',
+                nama_shift: 'Shift Pagi',
+                jam_masuk: '08:00',
+                jam_keluar: '16:00',
+                status_konfirmasi: 'pending'
+            }
+        };
+        
+        console.log('✅ Test shiftsData:', shiftsData);
+        
+        document.getElementById('status').innerHTML = `
+            <strong>✅ Elements Check:</strong><br>
+            - calendar-body: ${document.getElementById('calendar-body') ? 'Found' : 'NOT FOUND'}<br>
+            - current-month-year: ${document.getElementById('current-month-year') ? 'Found' : 'NOT FOUND'}<br>
+            - prev-month: ${document.getElementById('prev-month') ? 'Found' : 'NOT FOUND'}<br>
+            - next-month: ${document.getElementById('next-month') ? 'Found' : 'NOT FOUND'}<br>
+            <br>
+            <strong>📦 Data:</strong><br>
+            <pre>${JSON.stringify(shiftsData, null, 2)}</pre>
+        `;
+    </script>
+    <script src="script_jadwal_shift.js"></script>
+</body>
+</html>

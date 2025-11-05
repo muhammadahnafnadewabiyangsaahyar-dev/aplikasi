@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Kalender Database Integration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #084a62;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .test-button:hover {
+            background: #0a5a75;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        h2 { color: #084a62; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Kalender Database Integration</h1>
+    
+    <div class="test-section">
+        <h2>1. Test Database Connection</h2>
+        <button class="test-button" onclick="testConnection()">Test Connection</button>
+        <div id="result-connection" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Test Get Cabang</h2>
+        <button class="test-button" onclick="testGetCabang()">Load Cabang</button>
+        <div id="result-cabang" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Test Get Pegawai</h2>
+        <button class="test-button" onclick="testGetPegawai()">Load Pegawai</button>
+        <div id="result-pegawai" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Test Get Assignments</h2>
+        <button class="test-button" onclick="testGetAssignments()">Load Assignments (Nov 2025)</button>
+        <div id="result-assignments" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. Test Create Assignment</h2>
+        <p>User ID: <input type="number" id="test-user-id" value="1" style="width: 80px;"></p>
+        <p>Cabang ID: <input type="number" id="test-cabang-id" value="1" style="width: 80px;"></p>
+        <p>Tanggal: <input type="date" id="test-date" value="2025-11-05" style="width: 150px;"></p>
+        <button class="test-button" onclick="testCreateAssignment()">Create Assignment</button>
+        <div id="result-create" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>6. Test Delete Assignment</h2>
+        <p>Assignment ID: <input type="number" id="test-assignment-id" value="" style="width: 80px;"></p>
+        <button class="test-button" onclick="testDeleteAssignment()">Delete Assignment</button>
+        <div id="result-delete" class="result"></div>
+    </div>
+
+    <script>
+        async function testConnection() {
+            const result = document.getElementById('result-connection');
+            result.textContent = 'Testing connection...';
+            
+            try {
+                const response = await fetch('api_shift_calendar.php?action=get_cabang');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    result.className = 'result success';
+                    result.textContent = '✅ Connection successful!\n' + JSON.stringify(data, null, 2);
+                } else {
+                    result.className = 'result error';
+                    result.textContent = '❌ Connection failed!\n' + JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                result.className = 'result error';
+                result.textContent = '❌ Error: ' + error.message;
+            }
+        }
+        
+        async function testGetCabang() {
+            const result = document.getElementById('result-cabang');
+            result.textContent = 'Loading cabang...';
+            
+            try {
+                const response = await fetch('api_shift_calendar.php?action=get_cabang');
+                const data = await response.json();
+                
+                result.className = data.status === 'success' ? 'result success' : 'result error';
+                result.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                result.className = 'result error';
+                result.textContent = '❌ Error: ' + error.message;
+            }
+        }
+        
+        async function testGetPegawai() {
+            const result = document.getElementById('result-pegawai');
+            result.textContent = 'Loading pegawai...';
+            
+            try {
+                const response = await fetch('api_shift_calendar.php?action=get_pegawai');
+                const data = await response.json();
+                
+                result.className = data.status === 'success' ? 'result success' : 'result error';
+                result.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                result.className = 'result error';
+                result.textContent = '❌ Error: ' + error.message;
+            }
+        }
+        
+        async function testGetAssignments() {
+            const result = document.getElementById('result-assignments');
+            result.textContent = 'Loading assignments...';
+            
+            try {
+                const response = await fetch('api_shift_calendar.php?action=get_assignments&month=2025-11');
+                const data = await response.json();
+                
+                result.className = data.status === 'success' ? 'result success' : 'result error';
+                result.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                result.className = 'result error';
+                result.textContent = '❌ Error: ' + error.message;
+            }
+        }
+        
+        async function testCreateAssignment() {
+            const result = document.getElementById('result-create');
+            result.textContent = 'Creating assignment...';
+            
+            const userId = document.getElementById('test-user-id').value;
+            const cabangId = document.getElementById('test-cabang-id').value;
+            const date = document.getElementById('test-date').value;
+            
+            try {
+                const response = await fetch('api_shift_calendar.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'create',
+                        user_id: userId,
+                        cabang_id: cabangId,
+                        tanggal_shift: date
+                    })
+                });
+                
+                const data = await response.json();
+                
+                result.className = data.status === 'success' ? 'result success' : 'result error';
+                result.textContent = JSON.stringify(data, null, 2);
+                
+                if (data.status === 'success' && data.data && data.data.id) {
+                    document.getElementById('test-assignment-id').value = data.data.id;
+                }
+            } catch (error) {
+                result.className = 'result error';
+                result.textContent = '❌ Error: ' + error.message;
+            }
+        }
+        
+        async function testDeleteAssignment() {
+            const result = document.getElementById('result-delete');
+            result.textContent = 'Deleting assignment...';
+            
+            const assignmentId = document.getElementById('test-assignment-id').value;
+            
+            if (!assignmentId) {
+                result.className = 'result error';
+                result.textContent = '❌ Please enter assignment ID';
+                return;
+            }
+            
+            try {
+                const response = await fetch('api_shift_calendar.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'delete',
+                        id: assignmentId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                result.className = data.status === 'success' ? 'result success' : 'result error';
+                result.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                result.className = 'result error';
+                result.textContent = '❌ Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

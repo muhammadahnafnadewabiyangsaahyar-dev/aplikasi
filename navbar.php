@@ -68,8 +68,7 @@ if ($is_logged_in) {
             <a href="jadwal_shift.php" class="jadwalshift">Jadwal Shift</a>
 
             <?php if ($_SESSION['role'] == 'admin'): ?>
-                <a href="<?php echo $kalender_url; ?>" class="shift-calendar">Jadwal Shift</a>
-                <a href="<?php echo $shift_management_url; ?>" class="shift-management">Kelola Shift</a>
+                <a href="<?php echo $kalender_url; ?>" class="shift-calendar">Kelola Shift</a>
                 <a href="<?php echo $approvesurat_url; ?>" class="surat">Approve Surat</a>
                 <a href="<?php echo $view_user_url; ?>" class="viewusers">Daftar Pengguna</a>
                 <a href="<?php echo $view_absensi_url; ?>" class="viewabsensi">Daftar Absensi</a>

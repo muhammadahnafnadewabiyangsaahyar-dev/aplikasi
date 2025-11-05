@@ -26,7 +26,7 @@ $employees = $stmt_pegawai->fetchAll(PDO::FETCH_ASSOC);
 
 // Get shift assignments for current month
 $current_month = date('Y-m');
-$sql_assignments = "SELECT sa.*, r.nama_lengkap, c.nama_cabang, c.nama_shift
+$sql_assignments = "SELECT sa.*, r.nama_lengkap, c.nama_cabang, c.nama_shift, c.jam_masuk, c.jam_keluar
                     FROM shift_assignments sa
                     JOIN register r ON sa.user_id = r.id
                     JOIN cabang c ON sa.cabang_id = c.id
@@ -188,6 +188,21 @@ $assignments = $stmt_assignments->fetchAll(PDO::FETCH_ASSOC);
             color: white;
         }
         
+        .badge-approved {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .shift-locked {
+            background-color: #f5f5f5 !important;
+            opacity: 0.8;
+        }
+        
+        .shift-locked button[disabled] {
+            cursor: not-allowed !important;
+            opacity: 0.6;
+        }
+        
         .alert {
             padding: 15px;
             border-radius: 5px;
@@ -217,7 +232,7 @@ $assignments = $stmt_assignments->fetchAll(PDO::FETCH_ASSOC);
     <div class="container">
         <div class="header">
             <h1>📅 Shift Management</h1>
-            <a href="mainpage.php" class="btn btn-secondary">← Kembali</a>
+            <a href="kalender.php" class="btn btn-secondary">← Kembali</a>
         </div>
         
         <div id="alert-message" class="alert hidden"></div>
@@ -290,19 +305,34 @@ $assignments = $stmt_assignments->fetchAll(PDO::FETCH_ASSOC);
                     </tr>
                     <?php else: ?>
                     <?php foreach ($assignments as $assign): ?>
-                    <tr>
+                    <tr class="<?= $assign['status_konfirmasi'] === 'approved' ? 'shift-locked' : '' ?>">
                         <td><?= date('d M Y', strtotime($assign['tanggal_shift'])) ?></td>
                         <td><?= htmlspecialchars($assign['nama_lengkap']) ?></td>
                         <td><?= htmlspecialchars($assign['nama_cabang']) ?></td>
-                        <td><?= htmlspecialchars($assign['nama_shift']) ?></td>
+                        <td>
+                            <?= htmlspecialchars($assign['nama_shift']) ?>
+                            <small style="color: #666; display: block; margin-top: 2px;">
+                                (<?= substr($assign['jam_masuk'], 0, 5) ?> - <?= substr($assign['jam_keluar'], 0, 5) ?>)
+                            </small>
+                        </td>
                         <td>
                             <?php
+                            $status = $assign['status_konfirmasi'] ?? 'pending';
                             $status_class = 'badge-pending';
-                            if ($assign['status_konfirmasi'] === 'confirmed') $status_class = 'badge-confirmed';
-                            if ($assign['status_konfirmasi'] === 'declined') $status_class = 'badge-declined';
+                            $status_text = 'Pending';
+                            
+                            if ($status === 'approved') {
+                                $status_class = 'badge-approved';
+                                $status_text = '✓ Approved';
+                            } elseif ($status === 'declined') {
+                                $status_class = 'badge-declined';
+                                $status_text = '✗ Declined';
+                            } else {
+                                $status_text = '⏱ Pending';
+                            }
                             ?>
                             <span class="badge <?= $status_class ?>">
-                                <?= ucfirst($assign['status_konfirmasi']) ?>
+                                <?= $status_text ?>
                             </span>
                         </td>
                         <td>
@@ -313,9 +343,15 @@ $assignments = $stmt_assignments->fetchAll(PDO::FETCH_ASSOC);
                             <?php endif; ?>
                         </td>
                         <td>
+                            <?php if ($status === 'approved'): ?>
+                            <button class="btn btn-secondary" disabled title="Shift yang sudah approved tidak dapat dihapus">
+                                🔒 Locked
+                            </button>
+                            <?php else: ?>
                             <button class="btn btn-secondary" onclick="deleteAssignment(<?= $assign['id'] ?>)">
                                 Hapus
                             </button>
+                            <?php endif; ?>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -331,11 +367,22 @@ $assignments = $stmt_assignments->fetchAll(PDO::FETCH_ASSOC);
             e.preventDefault();
             
             const formData = new FormData(this);
+            const pegawai_id = formData.get('pegawai_id');
+            const cabang_id = formData.get('cabang_id');
+            const tanggal_shift = formData.get('tanggal_shift');
             
             try {
-                const response = await fetch('api_shift_management.php', {
+                const response = await fetch('api_shift_calendar.php', {
                     method: 'POST',
-                    body: formData
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'create',
+                        user_id: pegawai_id,
+                        cabang_id: cabang_id,
+                        tanggal_shift: tanggal_shift
+                    })
                 });
                 
                 const result = await response.json();
@@ -366,13 +413,15 @@ $assignments = $stmt_assignments->fetchAll(PDO::FETCH_ASSOC);
             if (!confirm('Yakin ingin menghapus assignment ini?')) return;
             
             try {
-                const formData = new FormData();
-                formData.append('action', 'delete');
-                formData.append('assignment_id', id);
-                
-                const response = await fetch('api_shift_management.php', {
+                const response = await fetch('api_shift_calendar.php', {
                     method: 'POST',
-                    body: formData
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'delete',
+                        id: id
+                    })
                 });
                 
                 const result = await response.json();
@@ -402,4 +451,3 @@ $assignments = $stmt_assignments->fetchAll(PDO::FETCH_ASSOC);
     </script>
 </body>
 </html>
-```

@@ -27,6 +27,10 @@ try {
             getCabang();
             break;
             
+        case 'get_shifts':
+            getShifts();
+            break;
+            
         case 'get_pegawai':
             getPegawai();
             break;
@@ -37,6 +41,10 @@ try {
             
         case 'create':
             createAssignment();
+            break;
+            
+        case 'assign_shifts':
+            assignShiftsBatch();
             break;
             
         case 'update':
@@ -54,12 +62,12 @@ try {
     echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
 }
 
-// Get all cabang
+// Get all cabang (unique outlets from cabang_outlet)
 function getCabang() {
     global $pdo;
     
-    $sql = "SELECT id, nama_cabang, nama_shift, jam_masuk, jam_keluar 
-            FROM cabang 
+    $sql = "SELECT id, nama_cabang 
+            FROM cabang_outlet 
             ORDER BY nama_cabang";
     
     $stmt = $pdo->query($sql);
@@ -68,29 +76,54 @@ function getCabang() {
     echo json_encode(['status' => 'success', 'data' => $data]);
 }
 
-// Get pegawai (rows for calendar)
+// Get shifts for specific outlet
+function getShifts() {
+    global $pdo;
+    
+    $outlet_name = $_GET['outlet'] ?? null;
+    
+    if (!$outlet_name) {
+        echo json_encode(['status' => 'error', 'message' => 'Outlet harus dipilih']);
+        return;
+    }
+    
+    $sql = "SELECT id, nama_cabang, nama_shift, jam_masuk, jam_keluar 
+            FROM cabang 
+            WHERE nama_cabang = :outlet
+            ORDER BY 
+                CASE nama_shift
+                    WHEN 'pagi' THEN 1
+                    WHEN 'middle' THEN 2
+                    WHEN 'sore' THEN 3
+                    ELSE 4
+                END";
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(['outlet' => $outlet_name]);
+    
+    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    echo json_encode(['status' => 'success', 'data' => $data]);
+}
+
+// Get pegawai (users for specific outlet)
 function getPegawai() {
     global $pdo;
     
-    $cabang_id = $_GET['cabang_id'] ?? null;
+    $outlet_name = $_GET['outlet'] ?? null;
     
-    $sql = "SELECT id, nama_lengkap as name, posisi, outlet, id_cabang 
-            FROM register 
-            WHERE role = 'user'";
-    
-    if ($cabang_id) {
-        $sql .= " AND id_cabang = :cabang_id";
+    if (!$outlet_name) {
+        echo json_encode(['status' => 'error', 'message' => 'Outlet harus dipilih']);
+        return;
     }
     
-    $sql .= " ORDER BY nama_lengkap";
+    $sql = "SELECT id, nama_lengkap as name, posisi, outlet 
+            FROM register 
+            WHERE role = 'user' AND outlet = :outlet
+            ORDER BY nama_lengkap";
     
     $stmt = $pdo->prepare($sql);
-    
-    if ($cabang_id) {
-        $stmt->execute(['cabang_id' => $cabang_id]);
-    } else {
-        $stmt->execute();
-    }
+    $stmt->execute(['outlet' => $outlet_name]);
     
     $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
@@ -113,6 +146,7 @@ function getAssignments() {
                 sa.user_id,
                 sa.cabang_id,
                 sa.tanggal_shift,
+                sa.status_konfirmasi,
                 DATE_FORMAT(CONCAT(sa.tanggal_shift, ' ', c.jam_masuk), '%Y-%m-%d %H:%i:%s') as start,
                 DATE_FORMAT(CONCAT(sa.tanggal_shift, ' ', c.jam_keluar), '%Y-%m-%d %H:%i:%s') as end,
                 c.nama_cabang,
@@ -203,6 +237,51 @@ function createAssignment() {
     ]);
 }
 
+// Assign shifts in batch
+function assignShiftsBatch() {
+    global $pdo, $admin_id;
+    
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    $assignments = $input['assignments'] ?? null;
+    
+    if (!$assignments || !is_array($assignments)) {
+        echo json_encode(['status' => 'error', 'message' => 'Data tidak lengkap']);
+        return;
+    }
+    
+    foreach ($assignments as $assignment) {
+        $user_id = $assignment['user_id'] ?? null;
+        $cabang_id = $assignment['cabang_id'] ?? null;
+        $tanggal_shift = $assignment['tanggal_shift'] ?? null;
+        
+        if (!$user_id || !$cabang_id || !$tanggal_shift) {
+            echo json_encode(['status' => 'error', 'message' => 'Data tidak lengkap']);
+            return;
+        }
+        
+        // Check if assignment already exists
+        $sql_check = "SELECT id FROM shift_assignments 
+                      WHERE user_id = ? AND tanggal_shift = ?";
+        $stmt_check = $pdo->prepare($sql_check);
+        $stmt_check->execute([$user_id, $tanggal_shift]);
+        
+        if ($stmt_check->rowCount() > 0) {
+            continue; // Skip to next assignment if already exists
+        }
+        
+        // Insert new assignment
+        $sql = "INSERT INTO shift_assignments 
+                (user_id, cabang_id, tanggal_shift, created_by, created_at) 
+                VALUES (?, ?, ?, ?, NOW())";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$user_id, $cabang_id, $tanggal_shift, $admin_id]);
+    }
+    
+    echo json_encode(['status' => 'success', 'message' => 'Shift berhasil di-assign']);
+}
+
 // Update assignment
 function updateAssignment() {
     global $pdo;
@@ -215,6 +294,17 @@ function updateAssignment() {
     
     if (!$id || !$user_id || !$tanggal_shift) {
         echo json_encode(['status' => 'error', 'message' => 'Data tidak lengkap']);
+        return;
+    }
+    
+    // Check if assignment is approved - if so, prevent update
+    $sql_status = "SELECT status_konfirmasi FROM shift_assignments WHERE id = ?";
+    $stmt_status = $pdo->prepare($sql_status);
+    $stmt_status->execute([$id]);
+    $status_data = $stmt_status->fetch(PDO::FETCH_ASSOC);
+    
+    if ($status_data && $status_data['status_konfirmasi'] === 'approved') {
+        echo json_encode(['status' => 'error', 'message' => 'Shift yang sudah approved tidak dapat diubah']);
         return;
     }
     
@@ -250,6 +340,17 @@ function deleteAssignment() {
     
     if (!$id) {
         echo json_encode(['status' => 'error', 'message' => 'ID tidak valid']);
+        return;
+    }
+    
+    // Check if assignment is approved - if so, prevent deletion
+    $sql_status = "SELECT status_konfirmasi FROM shift_assignments WHERE id = ?";
+    $stmt_status = $pdo->prepare($sql_status);
+    $stmt_status->execute([$id]);
+    $status_data = $stmt_status->fetch(PDO::FETCH_ASSOC);
+    
+    if ($status_data && $status_data['status_konfirmasi'] === 'approved') {
+        echo json_encode(['status' => 'error', 'message' => 'Shift yang sudah approved tidak dapat dihapus']);
         return;
     }
     

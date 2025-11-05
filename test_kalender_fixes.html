@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Kalender Fixes - November 2, 2025</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            color: #2196F3;
+            margin-top: 0;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.pass {
+            background: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+        }
+        .status.fail {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+        }
+        .status.pending {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+        }
+        .console-output {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #1976D2;
+        }
+        .btn.success {
+            background: #4CAF50;
+        }
+        .btn.success:hover {
+            background: #388E3C;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Kalender Fixes - November 2, 2025</h1>
+    
+    <div class="test-section">
+        <h2>📋 Checklist Masalah</h2>
+        <div class="status pending" id="issue1">
+            <strong>❌ Issue 1:</strong> Shift tanggal 2 November tampil di month view, tapi tidak di week/day view
+        </div>
+        <div class="status pending" id="issue2">
+            <strong>❌ Issue 2:</strong> Week view tidak menampilkan shift sesuai jam (tampil di summary box atas)
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔧 Perbaikan yang Diterapkan</h2>
+        <div class="status pass">
+            <strong>✅ Fix 1:</strong> <code>loadShiftAssignments()</code> sekarang load multi-month untuk week view
+            <br><small>Minggu yang melintasi 2 bulan (Oct-Nov) akan load kedua bulan</small>
+        </div>
+        <div class="status pass">
+            <strong>✅ Fix 2:</strong> Week view sekarang punya 24 time slots per hari
+            <br><small>Shift ditampilkan di row yang sesuai jam_masuk</small>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Instruksi Testing Manual</h2>
+        <div class="instructions">
+            <h3>Test 1: November 2, 2025 (Minggu)</h3>
+            <ol>
+                <li>Buka <a href="kalender.php" target="_blank"><button class="btn">kalender.php</button></a></li>
+                <li>Buka <strong>DevTools Console</strong> (tekan F12)</li>
+                <li>Pilih <strong>Cabang</strong> dari dropdown</li>
+                <li>Pilih <strong>Shift</strong> yang punya assignment di tanggal 2 Nov</li>
+                <li>Lihat console log: <code>Loading shift assignments for months: ["2025-10", "2025-11"]</code></li>
+            </ol>
+
+            <h3>Test 2: Month View</h3>
+            <ol>
+                <li>Pastikan di <strong>November 2025</strong></li>
+                <li>Cek tanggal 2 - harus ada shift</li>
+                <li>Console: <code>Month view - Found shift on 2025-11-02</code></li>
+            </ol>
+
+            <h3>Test 3: Week View</h3>
+            <ol>
+                <li>Klik button <strong>Week</strong></li>
+                <li>Navigate ke minggu <strong>27 Oktober - 2 November</strong></li>
+                <li>Console: <code>Loading shift assignments for months: ["2025-10", "2025-11"]</code></li>
+                <li>Console: <code>Week view - Day 2025-11-02: Found X shifts</code></li>
+                <li><strong>PENTING:</strong> Shift harus tampil di <strong>row waktu yang sesuai</strong>, bukan di summary box atas</li>
+                <li>Jika shift jam 08:00, harus di row "08:00"</li>
+            </ol>
+
+            <h3>Test 4: Day View</h3>
+            <ol>
+                <li>Dari month view, klik <strong>tanggal 2</strong></li>
+                <li>Console: <code>Day view - Looking for shifts on: 2025-11-02</code></li>
+                <li>Console: <code>Day view - Found X shifts for 2025-11-02</code></li>
+                <li>Shift harus tampil di slot waktu yang sesuai</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Expected Console Output</h2>
+        <div class="console-output" id="console-example">
+// Saat pilih shift di week view minggu 27 Oct - 2 Nov:
+Loading shift assignments for months: ["2025-10", "2025-11"]
+
+loadShiftAssignments - API response for 2025-10: {status: "success", data: Array(15)}
+loadShiftAssignments - Processing 15 assignments for 2025-10
+loadShiftAssignments - Added assignment: 2025-10-30-123 {...}
+
+loadShiftAssignments - API response for 2025-11: {status: "success", data: Array(20)}
+loadShiftAssignments - Processing 20 assignments for 2025-11
+loadShiftAssignments - Added assignment: 2025-11-02-789 {...}
+
+loadShiftAssignments - Final shiftAssignments object: {2025-10-30-123: {...}, 2025-11-02-789: {...}}
+
+// Week view generation:
+Week view - Checking: {assignmentDate: "2025-11-02", currentDateStr: "2025-11-02", matches: true, ...}
+Week view - Day 2025-11-02: Found 3 shifts
+
+// Day view (saat klik tanggal 2):
+Day view - Looking for shifts on: 2025-11-02
+Day view - All shiftAssignments: {2025-11-02-789: {...}, 2025-11-02-790: {...}, ...}
+Day view - Checking: {key: "2025-11-02-789", matches: true, ...}
+Day view - Found 3 shifts for 2025-11-02
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>❓ Troubleshooting</h2>
+        
+        <h3>Jika masih tidak tampil di week/day view:</h3>
+        <ol>
+            <li><strong>Clear browser cache</strong> (Ctrl+Shift+Delete)</li>
+            <li><strong>Hard refresh</strong> halaman (Ctrl+F5 atau Cmd+Shift+R)</li>
+            <li>Cek console apakah ada error JavaScript</li>
+            <li>Cek apakah file <code>script_kalender_database.js</code> ter-load dengan benar</li>
+            <li>Cek timestamp file: <button class="btn" onclick="checkFileTimestamp()">Check File Timestamp</button></li>
+        </ol>
+
+        <h3>Jika console tidak menampilkan log:</h3>
+        <ol>
+            <li>Console mungkin di-filter - pastikan filter di "All levels"</li>
+            <li>Coba refresh halaman</li>
+            <li>Pastikan Console tab aktif saat navigate</li>
+        </ol>
+
+        <h3>Jika API tidak return data November:</h3>
+        <ol>
+            <li>Cek database: <code>SELECT * FROM shift_assignments WHERE tanggal_shift = '2025-11-02'</code></li>
+            <li>Cek API langsung: <a href="api_shift_calendar.php?action=get_assignments&cabang_id=XXX&month=2025-11" target="_blank">api_shift_calendar.php?action=get_assignments&cabang_id=XXX&month=2025-11</a></li>
+            <li>Ganti XXX dengan cabang_id yang sesuai</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>✅ Hasil Test</h2>
+        <form id="test-results">
+            <div style="margin: 10px 0;">
+                <input type="checkbox" id="test1" name="test1">
+                <label for="test1">Console menampilkan: "Loading shift assignments for months: ['2025-10', '2025-11']"</label>
+            </div>
+            <div style="margin: 10px 0;">
+                <input type="checkbox" id="test2" name="test2">
+                <label for="test2">Month view: Shift tampil di tanggal 2 November</label>
+            </div>
+            <div style="margin: 10px 0;">
+                <input type="checkbox" id="test3" name="test3">
+                <label for="test3">Week view: Console log "Week view - Day 2025-11-02: Found X shifts"</label>
+            </div>
+            <div style="margin: 10px 0;">
+                <input type="checkbox" id="test4" name="test4">
+                <label for="test4">Week view: Shift tampil di row waktu yang sesuai (bukan summary box)</label>
+            </div>
+            <div style="margin: 10px 0;">
+                <input type="checkbox" id="test5" name="test5">
+                <label for="test5">Day view: Console log "Day view - Found X shifts for 2025-11-02"</label>
+            </div>
+            <div style="margin: 10px 0;">
+                <input type="checkbox" id="test6" name="test6">
+                <label for="test6">Day view: Shift tampil di slot waktu yang sesuai</label>
+            </div>
+            <br>
+            <button type="button" class="btn success" onclick="evaluateTests()">Evaluate Results</button>
+        </form>
+        <div id="evaluation-result" style="margin-top: 20px;"></div>
+    </div>
+
+    <script>
+        function checkFileTimestamp() {
+            fetch('script_kalender_database.js', { method: 'HEAD' })
+                .then(response => {
+                    const lastModified = response.headers.get('Last-Modified');
+                    alert('File last modified: ' + lastModified + '\n\nJika ini timestamp lama, file belum terupdate. Coba refresh browser atau clear cache.');
+                })
+                .catch(err => {
+                    alert('Error checking file: ' + err.message);
+                });
+        }
+
+        function evaluateTests() {
+            const checkboxes = document.querySelectorAll('#test-results input[type="checkbox"]');
+            const total = checkboxes.length;
+            let passed = 0;
+            
+            checkboxes.forEach(cb => {
+                if (cb.checked) passed++;
+            });
+            
+            const percentage = (passed / total * 100).toFixed(0);
+            const resultDiv = document.getElementById('evaluation-result');
+            
+            let resultClass = 'fail';
+            let emoji = '❌';
+            let message = 'Masih ada masalah yang perlu diperbaiki.';
+            
+            if (percentage === 100) {
+                resultClass = 'pass';
+                emoji = '✅';
+                message = 'Semua test passed! Kedua issue sudah terselesaikan.';
+                
+                document.getElementById('issue1').className = 'status pass';
+                document.getElementById('issue1').innerHTML = '<strong>✅ Issue 1:</strong> Shift tanggal 2 November sekarang tampil di semua view';
+                
+                document.getElementById('issue2').className = 'status pass';
+                document.getElementById('issue2').innerHTML = '<strong>✅ Issue 2:</strong> Week view sekarang menampilkan shift di row waktu yang sesuai';
+            } else if (percentage >= 50) {
+                resultClass = 'pending';
+                emoji = '⚠️';
+                message = 'Sebagian besar test passed, tapi masih perlu perbaikan.';
+            }
+            
+            resultDiv.innerHTML = `
+                <div class="status ${resultClass}">
+                    <h3>${emoji} Hasil: ${passed}/${total} tests passed (${percentage}%)</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

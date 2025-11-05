@@ -10,14 +10,14 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kalender Superinteraktif Shift Karyawan</title>
+    <title>Kalender Manajemen Shift Karyawan</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <?php
     include 'navbar.php';
     ?>
-    <h1 style="text-align: center; color: #333; margin-bottom: 30px;">Kalender Superinteraktif untuk Jadwal Shift Karyawan</h1>
+    <h1 style="text-align: center; color: #333; margin-bottom: 30px;">Kalender Manajemen Shift Karyawan</h1>
     <div id="controls">
         <div id="view-controls">
             <button id="view-day" class="view-btn">Day</button>
@@ -26,47 +26,23 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
             <button id="view-year" class="view-btn">Year</button>
         </div>
 
-        <label for="cabang-select">Mode Database (Optional):</label>
+        <label for="cabang-select">Pilih Cabang:</label>
         <select id="cabang-select">
-            <option value="">-- Mode LocalStorage (Original) --</option>
+            <option value="">-- Pilih Cabang --</option>
         </select>
 
-        <label for="employee-select">Pilih Karyawan:</label>
-        <select id="employee-select">
-            <option value="">-- Pilih Karyawan --</option>
-        </select>
-
-        <label for="shift-select">Pilih Shift:</label>
-        <select id="shift-select">
-            <option value="">-- Pilih Shift --</option>
-            <option value="Shift 1: Pagi">Shift 1: Pagi</option>
-            <option value="Shift 2: Siang">Shift 2: Siang</option>
-            <option value="Shift 3: Malam">Shift 3: Malam</option>
-            <option value="Off">Off</option>
-        </select>
-        <button id="add-employee">Tambah Karyawan</button>
+        <button id="shift-management-link" onclick="window.location.href='shift_management.php'" style="background-color: #2196F3; color: white; font-weight: bold; margin-right: 10px;">
+            📋 Kelola Shift (Tabel)
+        </button>
         <button id="export-schedule">Ekspor Jadwal (CSV)</button>
-        <button id="add-holiday">Tambah Hari Libur</button>
-        <button id="search-employee">Cari Karyawan</button>
-        <button id="filter-status">Filter Status</button>
-        <button id="filter-date">Filter Tanggal</button>
-        <button id="notify-shifts">Notifikasi Shift</button>
-        <button id="alert-low-shifts">Alert Shift Kurang</button>
         <button id="backup-data">Backup Data</button>
         <button id="restore-data">Restore Data</button>
-        <button id="set-preferences">Set Preferensi Shift</button>
-        <button id="set-timezone">Set Zona Waktu</button>
-        <button id="notify-manager">Notify Manager</button>
-        <button id="notify-employee-change">Notify Employee Change</button>
-        <button id="notify-employee-assigned">Notify Employee Assigned</button>
+        <button id="toggle-summary">Tampilkan Ringkasan</button>
     </div>
     <div id="navigation">
         <button id="prev-nav">< <span id="prev-label">Bulan Sebelumnya</span></button>
         <span id="current-nav"></span>
         <button id="next-nav"><span id="next-label">Bulan Berikutnya</span> ></button>
-    </div>
-    <div id="calendar-container">
-        <div id="month-year"></div>
     </div>
     <div id="calendar-view">
         <div id="month-view" class="view-container">
@@ -88,11 +64,7 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
             </table>
         </div>
         <div id="week-view" class="view-container" style="display: none;">
-            <div id="week-header">
-                <button id="prev-week"><</button>
-                <span id="week-range"></span>
-                <button id="next-week">></button>
-            </div>
+            <span id="week-range" style="display: none;"></span>
             <div id="week-calendar">
                 <div id="time-column">
                     <!-- Jam akan diisi oleh JS -->
@@ -103,11 +75,7 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
             </div>
         </div>
         <div id="day-view" class="view-container" style="display: none;">
-            <div id="day-header">
-                <button id="prev-day"><</button>
-                <span id="day-date"></span>
-                <button id="next-day">></button>
-            </div>
+            <span id="day-date" style="display: none;"></span>
             <div id="day-calendar">
                 <div id="day-time-column">
                     <!-- Jam akan diisi oleh JS -->
@@ -132,26 +100,82 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
             <p>Karyawan: <span id="modal-employee"></span></p>
             <label for="modal-shift">Shift:</label>
             <select id="modal-shift">
-                <option value="Shift 1: Pagi">Shift 1: Pagi</option>
-                <option value="Shift 2: Siang">Shift 2: Siang</option>
-                <option value="Shift 3: Malam">Shift 3: Malam</option>
-                <option value="Off">Off</option>
-                <option value="pagi">Database: Shift Pagi</option>
-                <option value="siang">Database: Shift Siang</option>
-                <option value="malam">Database: Shift Malam</option>
-                <option value="off">Database: Off</option>
+                <option value="pagi">Shift Pagi</option>
+                <option value="siang">Shift Siang</option>
+                <option value="malam">Shift Malam</option>
+                <option value="off">Off</option>
             </select>
             <button id="save-shift">Simpan</button>
         </div>
     </div>
-    <!-- Tabel untuk melihat jumlah karyawan, hari kerja, dll. -->
-    <button id="toggle-summary">Tampilkan Ringkasan</button>
+    
+    <!-- Modal untuk assign shift di Day View -->
+    <div id="day-assign-modal" class="modal">
+        <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+            <span class="close-day-assign">&times;</span>
+            <h2>Assign Shift - <span id="day-modal-date"></span></h2>
+            <p style="color: #666; margin-bottom: 20px;">Cabang: <span id="day-modal-cabang"></span></p>
+            
+            <!-- FIXED: Add shift selector in modal -->
+            <div style="margin-bottom: 20px; padding: 15px; background-color: #f0f8ff; border-radius: 8px; border-left: 4px solid #2196F3;">
+                <label for="day-modal-shift-select" style="font-weight: bold; display: block; margin-bottom: 8px;">
+                    Pilih Shift: <span style="color: red;">*</span>
+                </label>
+                <select id="day-modal-shift-select" style="width: 100%; padding: 10px; border: 2px solid #2196F3; border-radius: 4px; font-size: 14px;">
+                    <option value="">-- Pilih Shift --</option>
+                </select>
+                <small style="color: #666; display: block; margin-top: 5px;">
+                    ℹ️ Shift yang dipilih akan di-assign ke pegawai yang dipilih di bawah
+                </small>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <label style="font-weight: bold; margin: 0;">Pilih Pegawai:</label>
+                    <div style="display: flex; gap: 5px;">
+                        <button id="select-all-pegawai" style="background-color: #2196F3; color: white; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                            ✓ Pilih Semua
+                        </button>
+                        <button id="deselect-all-pegawai" style="background-color: #f44336; color: white; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                            ✗ Batal Semua
+                        </button>
+                    </div>
+                </div>
+                <input type="text" id="search-pegawai" placeholder="🔍 Cari nama pegawai..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px;">
+                <div id="pegawai-cards-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-height: 400px; overflow-y: auto; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f9f9f9;">
+                    <!-- Pegawai cards akan diisi oleh JavaScript -->
+                </div>
+                <p id="selected-count" style="margin-top: 10px; font-size: 14px; color: #666;">Terpilih: <strong>0</strong> pegawai</p>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button id="save-day-shift" style="flex: 1; background-color: #4CAF50; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">
+                    💾 Simpan Shift (<span id="save-count">0</span> pegawai)
+                </button>
+                <button id="cancel-day-shift" style="flex: 1; background-color: #f44336; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">
+                    ❌ Batal
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <div id="summary-tables" style="display: none;">
-        <h2>Ringkasan</h2>
-        <div id="summary-navigation">
-            <button id="prev-summary">< <span id="prev-summary-label">Bulan Sebelumnya</span></button>
-            <span id="current-summary"></span>
-            <button id="next-summary"><span id="next-summary-label">Bulan Berikutnya</span> ></button>
+        <h2>Ringkasan Shift Karyawan</h2>
+        
+        <!-- Navigation controls for summary -->
+        <div id="summary-navigation" style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px; padding: 15px; background-color: #f5f5f5; border-radius: 8px;">
+            <button id="summary-prev" class="nav-btn" style="padding: 10px 20px; background-color: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                <span id="summary-prev-label">◀ Sebelumnya</span>
+            </button>
+            <span id="summary-current-nav" style="font-weight: bold; font-size: 16px; min-width: 200px; text-align: center; color: #333;">-</span>
+            <button id="summary-next" class="nav-btn" style="padding: 10px 20px; background-color: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                <span id="summary-next-label">Berikutnya ▶</span>
+            </button>
+        </div>
+        
+        <div style="background-color: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #2196F3;">
+            <strong id="current-summary" style="display: block; font-size: 16px; color: #1976D2;">Loading...</strong>
+            <small style="color: #666; display: block; margin-top: 5px;">💡 Ringkasan ini menampilkan data sesuai dengan view dan tanggal yang dipilih di kalender</small>
         </div>
         <div id="summary-controls">
             <label for="summary-filter">Filter Nama:</label>
@@ -163,6 +187,8 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
             </select>
         </div>
         <button id="hide-summary">Sembunyikan Ringkasan</button>
+        
+        <h3 style="margin-top: 30px; color: #333;">📊 Ringkasan per Karyawan</h3>
         <table id="employee-summary">
             <thead>
                 <tr>
@@ -177,11 +203,13 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
                 <!-- Data akan diisi oleh JS -->
             </tbody>
         </table>
+        
+        <h3 style="margin-top: 30px; color: #333;">📅 Ringkasan per Shift</h3>
         <table id="shift-summary">
             <thead>
                 <tr>
                     <th>Shift</th>
-                    <th>Jumlah Karyawan</th>
+                    <th>Jumlah Penugasan</th>
                 </tr>
             </thead>
             <tbody id="shift-summary-body">
@@ -190,6 +218,6 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
         </table>
     </div>
 
-    <script src="script_hybrid.js"></script>
+    <script src="script_kalender_database.js"></script>
 </body>
 </html>

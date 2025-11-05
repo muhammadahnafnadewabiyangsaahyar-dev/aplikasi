@@ -432,14 +432,16 @@ try {
         }
 
         // INSERT data absen masuk 
+        // FIX: Gunakan foto_absen_masuk dan latitude/longitude_absen_masuk
         $sql_insert = "INSERT INTO absensi 
-                       (user_id, waktu_masuk, status_lokasi, latitude_absen, longitude_absen, foto_absen, tanggal_absensi, menit_terlambat, status_keterlambatan, potongan_tunjangan) 
+                       (user_id, waktu_masuk, status_lokasi, latitude_absen_masuk, longitude_absen_masuk, foto_absen_masuk, tanggal_absensi, menit_terlambat, status_keterlambatan, potongan_tunjangan) 
                        VALUES (?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt_insert = $pdo->prepare($sql_insert);
         $stmt_insert->execute([
             $user_id, $status_lokasi, $latitude_pengguna, $longitude_pengguna, 
             $nama_file_foto, $tanggal_hari_ini, $menit_terlambat, $status_keterlambatan, $potongan_tunjangan
         ]);
+        log_absen("✅ ABSEN MASUK SUCCESS", ['absen_id' => $pdo->lastInsertId()]);
         send_json(['status'=>'success','next'=>'keluar']);
     } elseif ($tipe_absen == 'keluar') {
         
@@ -512,10 +514,24 @@ try {
                 if (!file_put_contents($path_simpan_foto_keluar, $data_gambar_biner)) {
                     send_json(['status'=>'error','message'=>'Gagal simpan foto keluar']);
                 }
-                // FIX: Update kolom foto_absen_keluar (BUKAN foto_absen) - Kolom terpisah!
-                $sql_update_foto = "UPDATE absensi SET foto_absen_keluar = ? WHERE id = ?";
+                // FIX: Update kolom foto_absen_keluar, latitude_absen_keluar, longitude_absen_keluar
+                $sql_update_foto = "UPDATE absensi 
+                                   SET foto_absen_keluar = ?,
+                                       latitude_absen_keluar = ?,
+                                       longitude_absen_keluar = ?
+                                   WHERE id = ?";
                 $stmt_update_foto = $pdo->prepare($sql_update_foto);
-                $stmt_update_foto->execute([$nama_file_foto_keluar, $absen_id_yang_diupdate]);
+                $stmt_update_foto->execute([
+                    $nama_file_foto_keluar, 
+                    $latitude_pengguna, 
+                    $longitude_pengguna, 
+                    $absen_id_yang_diupdate
+                ]);
+                log_absen("✅ Foto & lokasi keluar saved", [
+                    'foto' => $nama_file_foto_keluar,
+                    'lat' => $latitude_pengguna,
+                    'lng' => $longitude_pengguna
+                ]);
             }
         }
 
