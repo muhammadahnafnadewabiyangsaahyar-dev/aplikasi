@@ -1,9 +1,0 @@
-# Allow access to JS files
-<FilesMatch "\.(js|css|json|map)$">
-    Require all granted
-</FilesMatch>
-
-# Enable CORS if needed
-<IfModule mod_headers.c>
-    Header set Access-Control-Allow-Origin "*"
-</IfModule>
