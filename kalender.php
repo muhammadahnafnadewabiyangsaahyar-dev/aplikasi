@@ -159,6 +159,34 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
         </div>
     </div>
     
+    <!-- Modal untuk delete shift di Day View -->
+    <!-- Modal untuk delete shift di Day View -->
+    <div id="day-delete-modal" class="modal">
+        <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+            <span class="close-day-delete">&times;</span>
+            <h2 class="modal-title" style="color: #f44336;">🗑️ Hapus Shift</h2>
+            
+            <!-- Shift info will be populated by JS -->
+            <div class="modal-shift-info">
+                <!-- Dynamic content -->
+            </div>
+            
+            <!-- Employee list will be populated by JS -->
+            <div class="modal-employee-list">
+                <!-- Dynamic content -->
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button id="confirm-delete-shift" style="flex: 1; background-color: #f44336; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">
+                    🗑️ Hapus Shift yang Dipilih
+                </button>
+                <button id="cancel-delete-shift" style="flex: 1; background-color: #757575; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">
+                    ❌ Batal
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <div id="summary-tables" style="display: none;">
         <h2>Ringkasan Shift Karyawan</h2>
         
@@ -204,6 +232,27 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
             </tbody>
         </table>
         
+        <!-- Notifier untuk pegawai dengan shift kurang dari 26 hari -->
+        <div id="under-minimum-notification" style="margin-top: 30px; padding: 20px; background-color: #fff3e0; border-radius: 8px; border-left: 4px solid #ff9800; display: none;">
+            <h3 style="color: #e65100; margin-top: 0;">⚠️ Perhatian: Pegawai Belum Memenuhi Minimum Shift</h3>
+            <p style="color: #666; margin-bottom: 15px;">
+                Berikut adalah daftar pegawai yang memiliki kurang dari <strong>26 hari shift</strong> dalam periode ini:
+            </p>
+            <table id="under-minimum-table" style="width: 100%; background-color: white; border-radius: 4px;">
+                <thead>
+                    <tr style="background-color: #ff9800; color: white;">
+                        <th style="padding: 12px; text-align: left;">Karyawan</th>
+                        <th style="padding: 12px; text-align: center;">Jumlah Shift</th>
+                        <th style="padding: 12px; text-align: center;">Kekurangan</th>
+                        <th style="padding: 12px; text-align: center;">Persentase</th>
+                    </tr>
+                </thead>
+                <tbody id="under-minimum-body">
+                    <!-- Data akan diisi oleh JS -->
+                </tbody>
+            </table>
+        </div>
+        
         <h3 style="margin-top: 30px; color: #333;">📅 Ringkasan per Shift</h3>
         <table id="shift-summary">
             <thead>
@@ -218,6 +267,12 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
         </table>
     </div>
 
-    <script src="script_kalender_database.js"></script>
+    <!-- Modular Kalender Scripts - Load in dependency order -->
+    <script src="script_kalender_utils.js"></script>
+    <script src="script_kalender_api.js"></script>
+    <script src="script_kalender_summary.js"></script>
+    <script src="script_kalender_assign.js"></script>
+    <script src="script_kalender_delete.js"></script>
+    <script src="script_kalender_core.js"></script>
 </body>
 </html>

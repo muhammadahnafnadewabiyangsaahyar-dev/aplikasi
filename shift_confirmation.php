@@ -359,6 +359,17 @@ $pending_count = count($pending_shifts);
                             <?= $shift['status_konfirmasi'] === 'confirmed' ? '✓ Dikonfirmasi' : '✗ Ditolak' ?>
                         </span>
                     </div>
+                    <?php if ($shift['status_konfirmasi'] === 'declined' && !empty($shift['decline_reason'])): ?>
+                    <div class="shift-info-item">
+                        <label>Alasan</label>
+                        <span style="font-size: 14px;">
+                            <?php
+                            $reasons = ['sakit' => '🤒 Sakit', 'izin' => '📝 Izin', 'reschedule' => '🔄 Reschedule'];
+                            echo $reasons[$shift['decline_reason']] ?? $shift['decline_reason'];
+                            ?>
+                        </span>
+                    </div>
+                    <?php endif; ?>
                     <div class="shift-info-item">
                         <label>Waktu Konfirmasi</label>
                         <span><?= date('d/m/Y H:i', strtotime($shift['waktu_konfirmasi'])) ?></span>
@@ -370,6 +381,9 @@ $pending_count = count($pending_shifts);
                     <p style="margin: 5px 0 0 0;"><?= htmlspecialchars($shift['catatan_pegawai']) ?></p>
                 </div>
                 <?php endif; ?>
+                <div style="margin-top: 10px; padding: 8px; background: <?= $shift['status_konfirmasi'] === 'confirmed' ? '#e8f5e9' : '#ffebee' ?>; border-radius: 5px; font-size: 12px; color: #666;">
+                    🔒 Shift ini sudah dikonfirmasi dan tidak dapat diubah
+                </div>
             </div>
             <?php endforeach; ?>
             <?php endif; ?>
@@ -380,16 +394,36 @@ $pending_count = count($pending_shifts);
     <div id="modal-decline" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Tolak Shift</h3>
+                <h3>❌ Tolak Shift</h3>
             </div>
             <form id="form-decline">
                 <input type="hidden" id="decline-shift-id" name="shift_id">
+                
                 <div class="form-group">
-                    <label for="catatan">Alasan Penolakan (opsional)</label>
-                    <textarea id="catatan" name="catatan" rows="4" placeholder="Berikan alasan mengapa Anda menolak shift ini..."></textarea>
+                    <label for="decline_reason" style="font-weight: bold; margin-bottom: 10px; display: block;">
+                        Pilih Alasan Penolakan <span style="color: red;">*</span>
+                    </label>
+                    <select id="decline_reason" name="decline_reason" required style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px; margin-bottom: 15px;">
+                        <option value="">-- Pilih Alasan --</option>
+                        <option value="sakit">🤒 Sakit</option>
+                        <option value="izin">📝 Izin</option>
+                        <option value="reschedule">🔄 Meminta Reschedule</option>
+                    </select>
                 </div>
+                
+                <div class="form-group">
+                    <label for="catatan">Catatan Tambahan (opsional)</label>
+                    <textarea id="catatan" name="catatan" rows="4" placeholder="Berikan detail tambahan jika diperlukan..." style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;"></textarea>
+                </div>
+                
+                <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin: 15px 0; border-radius: 4px; font-size: 13px;">
+                    <strong>⚠️ Perhatian:</strong> Email notifikasi akan otomatis dikirim ke HR dan Kepala Toko setelah Anda menyimpan penolakan ini.
+                </div>
+                
                 <div class="shift-actions">
-                    <button type="submit" class="btn btn-decline">Tolak Shift</button>
+                    <button type="submit" class="btn btn-decline">
+                        💾 Simpan & Kirim Notifikasi
+                    </button>
                     <button type="button" class="btn btn-secondary" onclick="closeModal()">Batal</button>
                 </div>
             </form>
@@ -399,28 +433,45 @@ $pending_count = count($pending_shifts);
     <script>
         // Confirm Shift
         async function confirmShift(shiftId, status) {
-            if (!confirm('Konfirmasi shift ini?')) return;
+            if (!confirm('✅ Konfirmasi shift ini?\n\nEmail notifikasi akan dikirim ke HR dan Kepala Toko.')) return;
             
             const formData = new FormData();
             formData.append('shift_id', shiftId);
             formData.append('status', status);
-            formData.append('catatan', '');
             
             try {
-                const response = await fetch('api_shift_confirmation.php', {
+                const response = await fetch('api_shift_confirmation_email.php', {
                     method: 'POST',
                     body: formData
                 });
                 
-                const result = await response.json();
+                // Check if response is OK
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Get response text first for debugging
+                const responseText = await response.text();
+                console.log('API Response:', responseText);
+                
+                // Try to parse JSON
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('JSON Parse Error:', parseError);
+                    console.error('Response Text:', responseText);
+                    throw new Error('Invalid JSON response from server');
+                }
                 
                 if (result.status === 'success') {
                     showAlert(result.message, 'success');
-                    setTimeout(() => location.reload(), 1500);
+                    setTimeout(() => location.reload(), 2000);
                 } else {
                     showAlert(result.message || 'Terjadi kesalahan', 'error');
                 }
             } catch (error) {
+                console.error('Confirm Shift Error:', error);
                 showAlert('Error: ' + error.message, 'error');
             }
         }
@@ -441,25 +492,50 @@ $pending_count = count($pending_shifts);
         document.getElementById('form-decline').addEventListener('submit', async function(e) {
             e.preventDefault();
             
+            // Validate decline reason
+            const declineReason = document.getElementById('decline_reason').value;
+            if (!declineReason) {
+                showAlert('⚠️ Silakan pilih alasan penolakan', 'error');
+                return;
+            }
+            
             const formData = new FormData(this);
             formData.append('status', 'declined');
             
             try {
-                const response = await fetch('api_shift_confirmation.php', {
+                const response = await fetch('api_shift_confirmation_email.php', {
                     method: 'POST',
                     body: formData
                 });
                 
-                const result = await response.json();
+                // Check if response is OK
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Get response text first for debugging
+                const responseText = await response.text();
+                console.log('API Response:', responseText);
+                
+                // Try to parse JSON
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('JSON Parse Error:', parseError);
+                    console.error('Response Text:', responseText);
+                    throw new Error('Invalid JSON response from server');
+                }
                 
                 if (result.status === 'success') {
                     closeModal();
                     showAlert(result.message, 'success');
-                    setTimeout(() => location.reload(), 1500);
+                    setTimeout(() => location.reload(), 2000);
                 } else {
                     showAlert(result.message || 'Terjadi kesalahan', 'error');
                 }
             } catch (error) {
+                console.error('Decline Shift Error:', error);
                 showAlert('Error: ' + error.message, 'error');
             }
         });

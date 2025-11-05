@@ -1,10 +1,32 @@
 <?php
+// Strict error handling for JSON API
+error_reporting(0);
+ini_set('display_errors', 0);
+
+// Start output buffering immediately
+ob_start();
+
 session_start();
 require_once 'connect.php';
-header('Content-Type: application/json');
+
+// Clear any previous output
+ob_end_clean();
+
+// Start fresh output buffer
+ob_start();
+
+// Set JSON header
+header('Content-Type: application/json; charset=utf-8');
+
+// Disable any potential output from error handlers
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    error_log("Error [$errno]: $errstr in $errfile on line $errline");
+    return true;
+});
 
 // Check if user is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+    ob_end_clean();
     echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
     exit();
 }
@@ -159,8 +181,11 @@ function getAssignments() {
             JOIN register r ON sa.user_id = r.id
             WHERE sa.tanggal_shift BETWEEN :start_date AND :end_date";
     
+    // Filter by outlet name (nama_cabang) instead of specific cabang_id
+    // This ensures all shift types for an outlet are included
     if ($cabang_id) {
-        $sql .= " AND sa.cabang_id = :cabang_id";
+        // Get the outlet name for this cabang_id
+        $sql .= " AND c.nama_cabang = (SELECT nama_cabang FROM cabang WHERE id = :cabang_id LIMIT 1)";
     }
     
     $sql .= " ORDER BY sa.tanggal_shift, sa.user_id";

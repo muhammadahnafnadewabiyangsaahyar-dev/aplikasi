@@ -1,11 +1,40 @@
 <?php
+// Strict error handling for JSON API
+error_reporting(0);
+ini_set('display_errors', 0);
+
+// Start output buffering immediately
+ob_start();
+
 session_start();
 include 'connect.php';
-header('Content-Type: application/json');
+
+// Clear any previous output
+ob_end_clean();
+
+// Start fresh output buffer
+ob_start();
+
+// Set JSON header
+header('Content-Type: application/json; charset=utf-8');
+
+// Disable any potential output from error handlers
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    error_log("Error [$errno]: $errstr in $errfile on line $errline");
+    return true;
+});
 
 // Check if user is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+    ob_end_clean();
     echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+    exit();
+}
+
+// Helper function to output JSON safely
+function jsonOutput($data) {
+    ob_end_clean();
+    echo json_encode($data);
     exit();
 }
 
@@ -145,11 +174,15 @@ elseif ($action === 'get_assignments') {
     $stmt->execute([$month]);
     $assignments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
+    ob_end_clean();
     echo json_encode(['status' => 'success', 'data' => $assignments]);
+    exit();
 }
 
 else {
+    ob_end_clean();
     echo json_encode(['status' => 'error', 'message' => 'Invalid action']);
+    exit();
 }
 ?>
 ```
