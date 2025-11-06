@@ -1,5 +1,35 @@
 <?php
 // ========================================================
+// --- SESSION CHECK: Redirect jika sudah login ---
+// ========================================================
+session_start();
+require_once 'security_helper.php';
+
+// Cek jika user sudah login dan session masih valid
+if (isset($_SESSION['user_id']) && SecurityHelper::validateSession()) {
+    // Redirect ke mainpage sesuai role
+    if (isset($_SESSION['role'])) {
+        if ($_SESSION['role'] === 'admin') {
+            header('Location: mainpage.php');
+        } else {
+            header('Location: mainpage.php');
+        }
+        exit;
+    } else {
+        // Fallback jika role tidak ada
+        header('Location: mainpage.php');
+        exit;
+    }
+}
+
+// Jika session tidak valid, destroy session
+if (isset($_SESSION['user_id']) && !SecurityHelper::validateSession()) {
+    session_unset();
+    session_destroy();
+    session_start(); // Start fresh session
+}
+
+// ========================================================
 // --- LOGIKA REGISTRASI & KONEKSI DB ---
 // ========================================================
 include 'connect.php'; // WAJIB ADA untuk koneksi DB (PDO)
@@ -419,6 +449,15 @@ try {
                         break;
                     case 'dberror':
                         $error_message = 'Terjadi masalah pada database. Hubungi admin.';
+                        break;
+                    case 'toomanyattempts':
+                        $error_message = 'Terlalu banyak percobaan login. Silakan tunggu 15 menit dan coba lagi.';
+                        break;
+                    case 'sessionexpired':
+                        $error_message = 'Sesi Anda telah berakhir. Silakan login kembali.';
+                        break;
+                    case 'notloggedin':
+                        $error_message = 'Anda harus login terlebih dahulu.';
                         break;
                 }
                 if ($error_message) {
