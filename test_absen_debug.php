@@ -35,7 +35,7 @@ if (isset($_SESSION['user_id'])) {
     echo "<tr><td>user_id</td><td>" . $_SESSION['user_id'] . "</td></tr>";
     echo "<tr><td>username</td><td>" . ($_SESSION['username'] ?? 'N/A') . "</td></tr>";
     echo "<tr><td>role</td><td>" . ($_SESSION['role'] ?? 'N/A') . "</td></tr>";
-    echo "<tr><td>outlet_id</td><td>" . ($_SESSION['outlet_id'] ?? 'N/A') . "</td></tr>";
+    echo "<tr><td>id_cabang (from DB)</td><td>Will check below</td></tr>";
     echo "<tr><td>csrf_token</td><td>" . (isset($_SESSION['csrf_token']) ? 'EXISTS' : 'MISSING') . "</td></tr>";
     echo "</table>";
 } else {
@@ -115,10 +115,10 @@ VALUES ('Kaori HQ - Remote Office', 'Flexible', 0, 0, 999999, '00:00:00', '23:59
 } else {
     echo "<p class='info'>ℹ️ User is REGULAR user - needs outlet validation</p>";
     
-    if (isset($user['outlet_id']) && $user['outlet_id']) {
+    if (isset($user['id_cabang']) && $user['id_cabang']) {
         try {
             $stmt = $pdo->prepare("SELECT * FROM cabang WHERE id = ?");
-            $stmt->execute([$user['outlet_id']]);
+            $stmt->execute([$user['id_cabang']]);
             $outlet = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($outlet) {
@@ -135,7 +135,7 @@ VALUES ('Kaori HQ - Remote Office', 'Flexible', 0, 0, 999999, '00:00:00', '23:59
             echo "<p class='error'>❌ Error: " . $e->getMessage() . "</p>";
         }
     } else {
-        echo "<p class='error'>❌ User has NO outlet_id assigned!</p>";
+        echo "<p class='error'>❌ User has NO id_cabang assigned!</p>";
     }
 }
 
@@ -298,13 +298,15 @@ VALUES ('Kaori HQ - Remote Office', 'Flexible', 0, 0, 999999, '00:00:00', '23:59
         echo "<p class='success'>✅ Kaori HQ exists (ID: " . $kaori_hq['id'] . ")</p>";
     }
     
-    // Cek apakah admin punya outlet_id ke Kaori HQ
-    if (!isset($user['outlet_id']) || $user['outlet_id'] != $kaori_hq['id']) {
-        echo "<p class='warning'>⚠️ UPDATE ADMIN OUTLET_ID!</p>";
+    // Cek apakah admin punya id_cabang ke Kaori HQ
+    if (!isset($user['id_cabang']) || $user['id_cabang'] != $kaori_hq['id']) {
+        echo "<p class='warning'>⚠️ UPDATE ADMIN ID_CABANG!</p>";
         echo "<pre style='background:#252526;padding:10px;'>
 -- Run this SQL:
-UPDATE register SET outlet_id = " . $kaori_hq['id'] . " WHERE id = $user_id;
+UPDATE register SET id_cabang = " . $kaori_hq['id'] . " WHERE id = $user_id;
 </pre>";
+    } else {
+        echo "<p class='success'>✅ Admin id_cabang already correct (ID: " . $user['id_cabang'] . ")</p>";
     }
 }
 
@@ -336,15 +338,15 @@ ON DUPLICATE KEY UPDATE nama_cabang = 'Kaori HQ - Remote Office';
 echo "<h3>Update ALL admins to use Kaori HQ:</h3>";
 echo "<pre style='background:#252526;padding:10px;'>
 UPDATE register r
-SET r.outlet_id = (SELECT id FROM cabang WHERE nama_cabang LIKE '%Kaori HQ%' LIMIT 1)
+SET r.id_cabang = (SELECT id FROM cabang WHERE nama_cabang LIKE '%Kaori HQ%' LIMIT 1)
 WHERE r.role = 'admin';
 </pre>";
 
 echo "<h3>Check admin users:</h3>";
 echo "<pre style='background:#252526;padding:10px;'>
-SELECT r.id, r.username, r.role, r.outlet_id, c.nama_cabang
+SELECT r.id, r.username, r.role, r.id_cabang, c.nama_cabang
 FROM register r
-LEFT JOIN cabang c ON r.outlet_id = c.id
+LEFT JOIN cabang c ON r.id_cabang = c.id
 WHERE r.role = 'admin';
 </pre>";
 
