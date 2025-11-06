@@ -15,6 +15,8 @@ $stats = [
     'tepat_waktu' => 0,
     'terlambat' => 0,
     'alpha' => 0,
+    'izin' => 0,
+    'sakit' => 0,
     'persentase_kehadiran' => 0,
     'rata_keterlambatan' => 0
 ];
@@ -26,10 +28,11 @@ try {
     
     // Hitung presensi valid (yang punya waktu_masuk, termasuk yang lupa absen pulang)
     // PERBAIKAN: "Lupa absen pulang" tetap dihitung sebagai hadir
+    // PENTING: Hanya hitung yang status_kehadiran = 'Hadir', TIDAK termasuk Izin/Sakit
     $sql_hadir = "SELECT COUNT(DISTINCT tanggal_absensi) as total 
                   FROM absensi 
                   WHERE user_id = ? 
-                  AND waktu_masuk IS NOT NULL
+                  AND status_kehadiran = 'Hadir'
                   AND DATE_FORMAT(tanggal_absensi, '%Y-%m') = ?";
     $stmt = $pdo->prepare($sql_hadir);
     $stmt->execute([$user_id, $bulan_ini]);
@@ -62,43 +65,68 @@ try {
     $lupa_absen_pulang = $stmt_lupa->fetchAll(PDO::FETCH_ASSOC);
     $stats['lupa_absen_pulang'] = count($lupa_absen_pulang);
     
-    // Hitung tepat waktu
+    // Hitung tepat waktu (hanya untuk yang status = 'Hadir')
     $sql_tepat = "SELECT COUNT(DISTINCT tanggal_absensi) as total 
                   FROM absensi 
                   WHERE user_id = ? 
+                  AND status_kehadiran = 'Hadir'
                   AND status_keterlambatan = 'tepat waktu'
                   AND DATE_FORMAT(tanggal_absensi, '%Y-%m') = ?";
     $stmt = $pdo->prepare($sql_tepat);
     $stmt->execute([$user_id, $bulan_ini]);
     $stats['tepat_waktu'] = $stmt->fetchColumn();
     
-    // Hitung terlambat (pastikan tidak negatif)
+    // Hitung terlambat (pastikan tidak negatif, hanya untuk yang status = 'Hadir')
     $stats['terlambat'] = max(0, $stats['total_hadir'] - $stats['tepat_waktu']);
     
-    // Hitung alpha (tidak hadir)
-    $stats['alpha'] = $hari_kerja - $stats['total_hadir'];
+    // Hitung izin dan sakit dari tabel absensi (lebih akurat)
+    $sql_izin = "SELECT COUNT(DISTINCT tanggal_absensi) as total 
+                 FROM absensi 
+                 WHERE user_id = ? 
+                 AND status_kehadiran = 'Izin'
+                 AND DATE_FORMAT(tanggal_absensi, '%Y-%m') = ?";
+    $stmt = $pdo->prepare($sql_izin);
+    $stmt->execute([$user_id, $bulan_ini]);
+    $stats['izin'] = $stmt->fetchColumn();
     
-    // Persentase kehadiran
-    $stats['persentase_kehadiran'] = $hari_kerja > 0 ? round(($stats['total_hadir'] / $hari_kerja) * 100, 1) : 0;
+    $sql_sakit = "SELECT COUNT(DISTINCT tanggal_absensi) as total 
+                  FROM absensi 
+                  WHERE user_id = ? 
+                  AND status_kehadiran = 'Sakit'
+                  AND DATE_FORMAT(tanggal_absensi, '%Y-%m') = ?";
+    $stmt = $pdo->prepare($sql_sakit);
+    $stmt->execute([$user_id, $bulan_ini]);
+    $stats['sakit'] = $stmt->fetchColumn();
     
-    // Rata-rata keterlambatan (menit)
+    // Hitung alpha (tidak hadir tanpa keterangan)
+    // Alpha = Total Hari Kerja - (Hadir + Izin + Sakit)
+    $stats['alpha'] = $hari_kerja - $stats['total_hadir'] - $stats['izin'] - $stats['sakit'];
+    
+    // Persentase kehadiran (termasuk izin dan sakit sebagai "present with excuse")
+    // Total Present = Hadir + Izin + Sakit
+    $total_present = $stats['total_hadir'] + $stats['izin'] + $stats['sakit'];
+    $stats['persentase_kehadiran'] = $hari_kerja > 0 ? round(($total_present / $hari_kerja) * 100, 1) : 0;
+    
+    // Rata-rata keterlambatan (menit, hanya untuk yang status = 'Hadir')
     $sql_avg_telat = "SELECT AVG(menit_terlambat) as rata 
                       FROM absensi 
                       WHERE user_id = ? 
+                      AND status_kehadiran = 'Hadir'
                       AND menit_terlambat > 0
                       AND DATE_FORMAT(tanggal_absensi, '%Y-%m') = ?";
     $stmt = $pdo->prepare($sql_avg_telat);
     $stmt->execute([$user_id, $bulan_ini]);
     $stats['rata_keterlambatan'] = round($stmt->fetchColumn() ?? 0, 1);
     
-    // Data untuk chart (7 hari terakhir)
+    // Data untuk chart (7 hari terakhir, hanya yang status = 'Hadir')
     $sql_chart = "SELECT 
                     DATE_FORMAT(tanggal_absensi, '%d/%m') as tanggal,
                     COUNT(*) as jumlah,
-                    SUM(CASE WHEN status_keterlambatan = 'tepat waktu' THEN 1 ELSE 0 END) as tepat_waktu,
-                    SUM(CASE WHEN menit_terlambat > 0 THEN 1 ELSE 0 END) as terlambat
+                    SUM(CASE WHEN status_keterlambatan = 'tepat waktu' AND status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) as tepat_waktu,
+                    SUM(CASE WHEN menit_terlambat > 0 AND status_kehadiran = 'Hadir' THEN 1 ELSE 0 END) as terlambat
                   FROM absensi 
                   WHERE user_id = ? 
+                  AND status_kehadiran = 'Hadir'
                   AND tanggal_absensi >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
                   GROUP BY tanggal_absensi 
                   ORDER BY tanggal_absensi ASC";
@@ -420,6 +448,20 @@ if ($is_admin) {
                 <div class="stat-label">Hari</div>
             </div>
             
+            <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="stat-icon"><i class="fa fa-file-medical"></i></div>
+                <div class="stat-label">Izin</div>
+                <div class="stat-value"><?= $stats['izin'] ?></div>
+                <div class="stat-label">Hari (Disetujui)</div>
+            </div>
+            
+            <div class="stat-card" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+                <div class="stat-icon"><i class="fa fa-notes-medical"></i></div>
+                <div class="stat-label">Sakit</div>
+                <div class="stat-value"><?= $stats['sakit'] ?></div>
+                <div class="stat-label">Hari (Disetujui)</div>
+            </div>
+            
             <?php if ($stats['lupa_absen_pulang'] > 0): ?>
             <div class="stat-card" style="background: linear-gradient(135deg, #ffa726 0%, #ff6b6b 100%); grid-column: span 2;">
                 <div class="stat-icon"><i class="fa fa-user-clock"></i></div>
@@ -458,15 +500,15 @@ if ($is_admin) {
     </div>
 
     <script>
-    // Chart Persentase Kehadiran (Doughnut)
+    // Chart Persentase Kehadiran (Doughnut) - Breakdown Detail
     const kehadiranCtx = document.getElementById('kehadiranChart').getContext('2d');
     new Chart(kehadiranCtx, {
         type: 'doughnut',
         data: {
-            labels: ['Hadir', 'Alpha'],
+            labels: ['Hadir', 'Izin', 'Sakit', 'Alpha'],
             datasets: [{
-                data: [<?= $stats['total_hadir'] ?>, <?= $stats['alpha'] ?>],
-                backgroundColor: ['#38ef7d', '#f5576c'],
+                data: [<?= $stats['total_hadir'] ?>, <?= $stats['izin'] ?>, <?= $stats['sakit'] ?>, <?= $stats['alpha'] ?>],
+                backgroundColor: ['#38ef7d', '#667eea', '#30cfd0', '#f5576c'],
                 borderWidth: 0
             }]
         },

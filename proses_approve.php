@@ -101,6 +101,36 @@ try {
         'nama_lengkap' => $_SESSION['nama_lengkap'] ?? 'Admin'
     ];
     
+    // === BUAT RECORD ABSENSI OTOMATIS UNTUK IZIN/SAKIT YANG DISETUJUI ===
+    if ($action == 'approve') {
+        $start = new DateTime($izin_data['tanggal_mulai']);
+        $end = new DateTime($izin_data['tanggal_selesai']);
+        $end->modify('+1 day'); // Include end date
+        
+        $period = new DatePeriod($start, new DateInterval('P1D'), $end);
+        
+        foreach ($period as $date) {
+            // Skip Sunday (day 7)
+            if ($date->format('N') == 7) continue;
+            
+            $tanggal = $date->format('Y-m-d');
+            $status = $izin_data['jenis_izin']; // 'Izin' atau 'Sakit'
+            
+            // Insert or update absensi
+            $sql_absensi = "INSERT INTO absensi 
+                           (user_id, tanggal_absensi, status_kehadiran, waktu_masuk, waktu_keluar, 
+                            menit_terlambat, status_keterlambatan)
+                           VALUES (?, ?, ?, NULL, NULL, 0, ?)
+                           ON DUPLICATE KEY UPDATE 
+                           status_kehadiran = VALUES(status_kehadiran),
+                           status_keterlambatan = VALUES(status_keterlambatan)";
+            $stmt_absensi = $pdo->prepare($sql_absensi);
+            $stmt_absensi->execute([$user_data['id'], $tanggal, $status, $status]);
+        }
+        
+        error_log("✅ Record absensi otomatis dibuat untuk {$izin_data['jenis_izin']} user {$user_data['nama_lengkap']}");
+    }
+    
     // === KIRIM NOTIFIKASI EMAIL MENGGUNAKAN HELPER FUNCTION ===
     // PENTING: Gunakan $email_status (user-friendly) bukan $new_status (database)
     $email_sent = sendEmailIzinStatus($izin_data, $user_data, $email_status, '', $approver_data);

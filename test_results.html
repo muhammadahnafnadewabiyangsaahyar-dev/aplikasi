@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive Integration Test Suite - KAORI System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            background: white; 
+            border-radius: 15px; 
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            padding: 40px; 
+            text-align: center; 
+        }
+        .header h1 { 
+            font-size: 2.5em; 
+            margin-bottom: 10px; 
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .header p { 
+            font-size: 1.2em; 
+            opacity: 0.9; 
+        }
+        .test-content { 
+            padding: 40px; 
+        }
+        .test-section { 
+            background: #f8f9fa; 
+            border-left: 5px solid #667eea; 
+            padding: 25px; 
+            margin-bottom: 30px; 
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section-header { 
+            color: #667eea; 
+            font-size: 1.5em; 
+            margin-bottom: 15px; 
+            font-weight: 600;
+        }
+        .log-container { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 5px; 
+            font-family: 'Courier New', monospace; 
+            font-size: 13px;
+        }
+        .log-entry { 
+            padding: 8px 12px; 
+            margin: 5px 0; 
+            border-radius: 4px; 
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .log-timestamp { 
+            color: #6c757d; 
+            font-weight: 500;
+        }
+        .log-level { 
+            font-weight: bold; 
+            padding: 2px 8px; 
+            border-radius: 3px; 
+            font-size: 11px;
+        }
+        .log-info .log-level { background: #d1ecf1; color: #0c5460; }
+        .log-success .log-level { background: #d4edda; color: #155724; }
+        .log-error .log-level { background: #f8d7da; color: #721c24; }
+        .log-message { 
+            flex: 1;
+        }
+        .test-result { 
+            padding: 12px 20px; 
+            margin: 8px 0; 
+            border-radius: 5px; 
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .test-pass { 
+            background: #d4edda; 
+            border-left: 4px solid #28a745; 
+            color: #155724; 
+        }
+        .test-pass::before {
+            content: "✓";
+            background: #28a745;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .test-fail { 
+            background: #f8d7da; 
+            border-left: 4px solid #dc3545; 
+            color: #721c24; 
+        }
+        .test-fail::before {
+            content: "✗";
+            background: #dc3545;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .summary { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            padding: 40px; 
+            margin-top: 40px; 
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .summary h2 { 
+            font-size: 2em; 
+            margin-bottom: 20px; 
+            text-align: center;
+        }
+        .summary-stats { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 20px; 
+            margin: 30px 0;
+        }
+        .stat-card { 
+            background: rgba(255,255,255,0.15); 
+            padding: 25px; 
+            border-radius: 10px; 
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        .stat-value { 
+            font-size: 3em; 
+            font-weight: bold; 
+            margin: 10px 0;
+        }
+        .stat-label { 
+            font-size: 1.1em; 
+            opacity: 0.9;
+        }
+        .manual-steps { 
+            background: white; 
+            color: #333; 
+            padding: 30px; 
+            border-radius: 10px; 
+            margin-top: 30px;
+        }
+        .manual-steps h3 { 
+            color: #667eea; 
+            margin-bottom: 15px; 
+            font-size: 1.5em;
+        }
+        .manual-steps ol { 
+            margin-left: 20px; 
+        }
+        .manual-steps li { 
+            padding: 8px 0; 
+            font-size: 1.1em;
+        }
+        .test-users { 
+            background: rgba(255,255,255,0.1); 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin-top: 20px;
+        }
+        .test-users h4 { 
+            margin-bottom: 10px; 
+            font-size: 1.3em;
+        }
+        .test-users ul { 
+            list-style: none; 
+        }
+        .test-users li { 
+            padding: 8px 0; 
+            font-size: 1.1em;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .footer { 
+            background: #2c3e50; 
+            color: white; 
+            padding: 30px; 
+            text-align: center; 
+            font-size: 0.9em;
+        }
+        @media print {
+            body { background: white; }
+            .container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 Comprehensive Integration Test Suite</h1>
+            <p>Testing all interconnected features of KAORI System</p>
+            <p style="font-size: 0.9em; margin-top: 10px; opacity: 0.8;">
+                Started at: 2025-11-06 05:26:25            </p>
+        </div>
+        <div class="test-content">
+<div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:25</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Cleaning up previous test data...</span>
+    </div><div class='log-entry log-success'>
+        <span class='log-timestamp'>2025-11-06 13:26:25</span>
+        <span class='log-level'>SUCCESS</span>
+        <span class='log-message'>Cleanup completed successfully</span>
+    </div><div class='test-section'>
+        <h2 class='test-section-header'>Test #1: CREATE TEST USERS</h2>
+        <div class='log-container'><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:25</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Creating test user: Kata Hnaf (katahnaf@gmail.com)</span>
+    </div><div class='log-entry log-success'>
+        <span class='log-timestamp'>2025-11-06 13:26:26</span>
+        <span class='log-level'>SUCCESS</span>
+        <span class='log-message'>User created successfully with ID: 107</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:26</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Creating test user: Pilar Aforisma (pilaraforismacinta@gmail.com)</span>
+    </div><div class='log-entry log-success'>
+        <span class='log-timestamp'>2025-11-06 13:26:27</span>
+        <span class='log-level'>SUCCESS</span>
+        <span class='log-message'>User created successfully with ID: 108</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:27</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Creating test user: Galih Ganji (galihganji@gmail.com)</span>
+    </div><div class='log-entry log-success'>
+        <span class='log-timestamp'>2025-11-06 13:26:29</span>
+        <span class='log-level'>SUCCESS</span>
+        <span class='log-message'>User created successfully with ID: 109</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:29</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Creating test user: Dot Pikir (dotpikir@gmail.com)</span>
+    </div><div class='log-entry log-success'>
+        <span class='log-timestamp'>2025-11-06 13:26:30</span>
+        <span class='log-level'>SUCCESS</span>
+        <span class='log-message'>User created successfully with ID: 110</span>
+    </div><div class='test-result test-pass'>
+        <strong>All test users created</strong></div></div></div><div class='test-section'>
+        <h2 class='test-section-header'>Test #2: APPROVE IZIN → STATUS ABSEN & SHIFT</h2>
+        <div class='log-container'><div class='test-result test-pass'>
+        <strong>Create shift for izin test</strong></div><div class='test-result test-pass'>
+        <strong>Create izin request</strong></div><div class='test-result test-pass'>
+        <strong>Approve izin</strong></div><div class='test-result test-pass'>
+        <strong>Shift status unchanged</strong></div><div class='test-result test-pass'>
+        <strong>Leave status = Diterima</strong></div></div></div><div class='test-section'>
+        <h2 class='test-section-header'>Test #3: SAKIT → STATUS SHIFT & ABSENSI</h2>
+        <div class='log-container'><div class='test-result test-pass'>
+        <strong>Create shift for sakit test</strong></div><div class='test-result test-pass'>
+        <strong>Create approved sakit request</strong></div><div class='test-result test-pass'>
+        <strong>No attendance record for sakit day</strong></div></div></div><div class='test-section'>
+        <h2 class='test-section-header'>Test #4: SHIFT CONFIRMED → TIDAK ABSEN (Potongan 50k)</h2>
+        <div class='log-container'><div class='test-result test-pass'>
+        <strong>Create confirmed shift</strong></div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:30</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>No attendance record created (simulating tidak hadir)</span>
+    </div><div class='test-result test-pass'>
+        <strong>Shift is confirmed</strong></div><div class='test-result test-pass'>
+        <strong>No attendance record exists</strong></div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:30</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Expected: Potongan 50.000 in slip gaji</span>
+    </div></div></div><div class='test-section'>
+        <h2 class='test-section-header'>Test #5: SHIFT CONFIRMED → HADIR</h2>
+        <div class='log-container'><div class='test-result test-pass'>
+        <strong>Create confirmed shift</strong></div><div class='test-result test-pass'>
+        <strong>Create attendance record</strong></div><div class='test-result test-pass'>
+        <strong>Attendance status = Hadir</strong></div><div class='test-result test-pass'>
+        <strong>No late minutes</strong></div></div></div><div class='test-section'>
+        <h2 class='test-section-header'>Test #6: KETERLAMBATAN VARIATIONS</h2>
+        <div class='log-container'><div class='test-result test-pass'>
+        <strong>Keterlambatan 10 menit</strong> <span style='opacity: 0.8;'>→ Terlambat < 20 menit</span></div><div class='test-result test-pass'>
+        <strong>Keterlambatan 25 menit</strong> <span style='opacity: 0.8;'>→ Terlambat > 20 menit</span></div><div class='test-result test-pass'>
+        <strong>Keterlambatan 45 menit</strong> <span style='opacity: 0.8;'>→ Terlambat > 20 menit</span></div></div></div><div class='test-section'>
+        <h2 class='test-section-header'>Test #7: OVERWORK OTOMATIS (Bukan Jadwal Shift)</h2>
+        <div class='log-container'><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:30</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>No shift assignment (simulating overwork)</span>
+    </div><div class='test-result test-pass'>
+        <strong>Create overwork attendance</strong></div><div class='test-result test-pass'>
+        <strong>No shift assignment</strong></div><div class='test-result test-pass'>
+        <strong>Work hours >= 8</strong> <span style='opacity: 0.8;'>→ Worked 8 hours</span></div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:30</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Expected: Overwork payment 50.000 in slip gaji</span>
+    </div><div class='test-result test-pass'>
+        <strong>Create overwork with 30min late</strong></div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:30</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Expected: Overwork 50.000 - potongan (30min / 60 * 6.250)</span>
+    </div></div></div><div class='test-section'>
+        <h2 class='test-section-header'>Test #8: GENERATE MONTHLY SHIFTS & VARIED ATTENDANCE</h2>
+        <div class='log-container'><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:30</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Generating shifts for user 110 for 2025-11</span>
+    </div><div class='log-entry log-success'>
+        <span class='log-timestamp'>2025-11-06 13:26:30</span>
+        <span class='log-level'>SUCCESS</span>
+        <span class='log-message'>Created 25 shifts for the month</span>
+    </div><div class='test-result test-pass'>
+        <strong>Monthly shifts generated</strong> <span style='opacity: 0.8;'>→ 25 shifts created</span></div><div class='test-result test-pass'>
+        <strong>Attendance: On time</strong> <span style='opacity: 0.8;'>→ 2025-11-04</span></div><div class='test-result test-pass'>
+        <strong>Attendance: Late 15 min</strong> <span style='opacity: 0.8;'>→ 2025-11-05</span></div><div class='test-result test-pass'>
+        <strong>Attendance: Late 30 min</strong> <span style='opacity: 0.8;'>→ 2025-11-06</span></div><div class='test-result test-pass'>
+        <strong>Attendance: Overtime</strong> <span style='opacity: 0.8;'>→ 2025-11-07</span></div><div class='test-result test-pass'>
+        <strong>Create approved izin for User 4</strong> <span style='opacity: 0.8;'>→ 2 days</span></div><div class='test-result test-pass'>
+        <strong>Create approved sakit for User 4</strong> <span style='opacity: 0.8;'>→ 2 days</span></div></div></div><div class='test-section'>
+        <h2 class='test-section-header'>Test #9: GENERATE SLIP GAJI FOR ALL USERS</h2>
+        <div class='log-container'></div></div><div class='test-section'>
+        <h2 class='test-section-header'>Test #10: GENERATE SLIP GAJI</h2>
+        <div class='log-container'><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:30</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Running auto_generate_slipgaji.php...</span>
+    </div><div class='test-result test-pass'>
+        <strong>Execute slip gaji script</strong> <span style='opacity: 0.8;'>→ === AUTO GENERATE SLIP GAJI ===
+Started at: 2025-11-06 13:26:30
+
+Period: 2025-10-28 to 2025-11-27
+Month: 11, Year: 2025
+
+Total employees: 37
+
+Processing: Ahmad Pratama [user]... ✗ Failed: Komponen gaji not found
+Processing: Ayu Ting Ting [user]... ✗ Failed: Komponen gaji not found
+Processing: Bayu Skak [user]... ✗ Failed: Komponen gaji not found
+Processing: Budi Santoso [user]... ✗ Failed: Komponen gaji not found
+Processing: Cinta Laura [user]... ✗ Failed: Komponen gaji not found
+Processing: Denny Caknan [user]... ✗ Failed: Komponen gaji not found
+Processing: Dewi Lestari [user]... ✗ Failed: Komponen gaji not found
+Processing: Dot Pikir [user]... ✓ Success
+Processing: Eko Prasetyo [user]... ✗ Failed: Komponen gaji not found
+Processing: Fitri Handayani [user]... ✗ Failed: Komponen gaji not found
+Processing: Galih Ganji [user]... ✓ Success
+Processing: Gunawan Setiawan [user]... ✗ Failed: Komponen gaji not found
+Processing: Hani Permata [user]... ✗ Failed: Komponen gaji not found
+Processing: Indra Wijaya [user]... ✗ Failed: Komponen gaji not found
+Processing: Julia Rahmawati [user]... ✗ Failed: Komponen gaji not found
+Processing: Kartika Sari [user]... ✗ Failed: Komponen gaji not found
+Processing: Kata Hnaf [user]... ✓ Success
+Processing: Lukman Hakim [user]... ✗ Failed: Komponen gaji not found
+Processing: Maya Angelina [user]... ✗ Failed: Komponen gaji not found
+Processing: Muhammad Abizar Nafara [admin]... ✓ Success
+Processing: Nanda Pratama [user]... ✗ Failed: Komponen gaji not found
+Processing: Olivia Margareta [user]... ✗ Failed: Komponen gaji not found
+Processing: Pandu Kusuma [user]... ✗ Failed: Komponen gaji not found
+Processing: Pilar Aforisma [user]... ✓ Success
+Processing: Qory Sandrina [user]... ✗ Failed: Komponen gaji not found
+Processing: Rudi Hermawan [user]... ✗ Failed: Komponen gaji not found
+Processing: Sarah Amelia [user]... ✗ Failed: Komponen gaji not found
+Processing: Siti Nurhaliza [user]... ✗ Failed: Komponen gaji not found
+Processing: superadmin [admin]... ✗ Failed: Komponen gaji not found
+Processing: tesrole [user]... ✗ Failed: Komponen gaji not found
+Processing: Tono Sugiarto [user]... ✗ Failed: Komponen gaji not found
+Processing: Umi Kalsum [user]... ✗ Failed: Komponen gaji not found
+Processing: Victor Ramadhan [user]... ✗ Failed: Komponen gaji not found
+Processing: Wulan Dari [user]... ✗ Failed: Komponen gaji not found
+Processing: Xavier Putra [user]... ✗ Failed: Komponen gaji not found
+Processing: Yuni Shara [user]... ✗ Failed: Komponen gaji not found
+Processing: Zaki Ismail [user]... ✗ Failed: Komponen gaji not found
+
+=== SUMMARY ===
+Success: 5
+Failed: 32
+Completed at: 2025-11-06 13:26:31</span></div><div class='test-result test-pass'>
+        <strong>Slip gaji created</strong> <span style='opacity: 0.8;'>→ ID: 203</span></div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:31</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Gaji Pokok Aktual: Rp 5.000.000</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:31</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Total Pendapatan: Rp 6.000.000</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:31</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Total Potongan: Rp 100.000</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:31</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Gaji Bersih: Rp 5.900.000</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:31</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Overwork: Rp 0</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:31</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Potongan Tidak Hadir: Rp 100.000</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:31</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Potongan Telat > 20: Rp 0</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:31</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Potongan Telat < 20: Rp 0</span>
+    </div></div></div><div class='test-section'>
+        <h2 class='test-section-header'>Test #11: GENERATE SLIP GAJI</h2>
+        <div class='log-container'><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:31</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Running auto_generate_slipgaji.php...</span>
+    </div><div class='test-result test-pass'>
+        <strong>Execute slip gaji script</strong> <span style='opacity: 0.8;'>→ === AUTO GENERATE SLIP GAJI ===
+Started at: 2025-11-06 13:26:31
+
+Period: 2025-10-28 to 2025-11-27
+Month: 11, Year: 2025
+
+Total employees: 37
+
+Processing: Ahmad Pratama [user]... ✗ Failed: Komponen gaji not found
+Processing: Ayu Ting Ting [user]... ✗ Failed: Komponen gaji not found
+Processing: Bayu Skak [user]... ✗ Failed: Komponen gaji not found
+Processing: Budi Santoso [user]... ✗ Failed: Komponen gaji not found
+Processing: Cinta Laura [user]... ✗ Failed: Komponen gaji not found
+Processing: Denny Caknan [user]... ✗ Failed: Komponen gaji not found
+Processing: Dewi Lestari [user]... ✗ Failed: Komponen gaji not found
+Processing: Dot Pikir [user]... ✓ Success
+Processing: Eko Prasetyo [user]... ✗ Failed: Komponen gaji not found
+Processing: Fitri Handayani [user]... ✗ Failed: Komponen gaji not found
+Processing: Galih Ganji [user]... ✓ Success
+Processing: Gunawan Setiawan [user]... ✗ Failed: Komponen gaji not found
+Processing: Hani Permata [user]... ✗ Failed: Komponen gaji not found
+Processing: Indra Wijaya [user]... ✗ Failed: Komponen gaji not found
+Processing: Julia Rahmawati [user]... ✗ Failed: Komponen gaji not found
+Processing: Kartika Sari [user]... ✗ Failed: Komponen gaji not found
+Processing: Kata Hnaf [user]... ✓ Success
+Processing: Lukman Hakim [user]... ✗ Failed: Komponen gaji not found
+Processing: Maya Angelina [user]... ✗ Failed: Komponen gaji not found
+Processing: Muhammad Abizar Nafara [admin]... ✓ Success
+Processing: Nanda Pratama [user]... ✗ Failed: Komponen gaji not found
+Processing: Olivia Margareta [user]... ✗ Failed: Komponen gaji not found
+Processing: Pandu Kusuma [user]... ✗ Failed: Komponen gaji not found
+Processing: Pilar Aforisma [user]... ✓ Success
+Processing: Qory Sandrina [user]... ✗ Failed: Komponen gaji not found
+Processing: Rudi Hermawan [user]... ✗ Failed: Komponen gaji not found
+Processing: Sarah Amelia [user]... ✗ Failed: Komponen gaji not found
+Processing: Siti Nurhaliza [user]... ✗ Failed: Komponen gaji not found
+Processing: superadmin [admin]... ✗ Failed: Komponen gaji not found
+Processing: tesrole [user]... ✗ Failed: Komponen gaji not found
+Processing: Tono Sugiarto [user]... ✗ Failed: Komponen gaji not found
+Processing: Umi Kalsum [user]... ✗ Failed: Komponen gaji not found
+Processing: Victor Ramadhan [user]... ✗ Failed: Komponen gaji not found
+Processing: Wulan Dari [user]... ✗ Failed: Komponen gaji not found
+Processing: Xavier Putra [user]... ✗ Failed: Komponen gaji not found
+Processing: Yuni Shara [user]... ✗ Failed: Komponen gaji not found
+Processing: Zaki Ismail [user]... ✗ Failed: Komponen gaji not found
+
+=== SUMMARY ===
+Success: 5
+Failed: 32
+Completed at: 2025-11-06 13:26:32</span></div><div class='test-result test-pass'>
+        <strong>Slip gaji created</strong> <span style='opacity: 0.8;'>→ ID: 210</span></div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:32</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Gaji Pokok Aktual: Rp 5.000.000</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:32</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Total Pendapatan: Rp 6.000.000</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:32</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Total Potongan: Rp 50.000</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:32</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Gaji Bersih: Rp 5.950.000</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:32</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Overwork: Rp 0</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:32</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Potongan Tidak Hadir: Rp 50.000</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:32</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Potongan Telat > 20: Rp 0</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:32</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Potongan Telat < 20: Rp 0</span>
+    </div></div></div><div class='test-section'>
+        <h2 class='test-section-header'>Test #12: GENERATE SLIP GAJI</h2>
+        <div class='log-container'><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:32</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Running auto_generate_slipgaji.php...</span>
+    </div><div class='test-result test-pass'>
+        <strong>Execute slip gaji script</strong> <span style='opacity: 0.8;'>→ === AUTO GENERATE SLIP GAJI ===
+Started at: 2025-11-06 13:26:33
+
+Period: 2025-10-28 to 2025-11-27
+Month: 11, Year: 2025
+
+Total employees: 37
+
+Processing: Ahmad Pratama [user]... ✗ Failed: Komponen gaji not found
+Processing: Ayu Ting Ting [user]... ✗ Failed: Komponen gaji not found
+Processing: Bayu Skak [user]... ✗ Failed: Komponen gaji not found
+Processing: Budi Santoso [user]... ✗ Failed: Komponen gaji not found
+Processing: Cinta Laura [user]... ✗ Failed: Komponen gaji not found
+Processing: Denny Caknan [user]... ✗ Failed: Komponen gaji not found
+Processing: Dewi Lestari [user]... ✗ Failed: Komponen gaji not found
+Processing: Dot Pikir [user]... ✓ Success
+Processing: Eko Prasetyo [user]... ✗ Failed: Komponen gaji not found
+Processing: Fitri Handayani [user]... ✗ Failed: Komponen gaji not found
+Processing: Galih Ganji [user]... ✓ Success
+Processing: Gunawan Setiawan [user]... ✗ Failed: Komponen gaji not found
+Processing: Hani Permata [user]... ✗ Failed: Komponen gaji not found
+Processing: Indra Wijaya [user]... ✗ Failed: Komponen gaji not found
+Processing: Julia Rahmawati [user]... ✗ Failed: Komponen gaji not found
+Processing: Kartika Sari [user]... ✗ Failed: Komponen gaji not found
+Processing: Kata Hnaf [user]... ✓ Success
+Processing: Lukman Hakim [user]... ✗ Failed: Komponen gaji not found
+Processing: Maya Angelina [user]... ✗ Failed: Komponen gaji not found
+Processing: Muhammad Abizar Nafara [admin]... ✓ Success
+Processing: Nanda Pratama [user]... ✗ Failed: Komponen gaji not found
+Processing: Olivia Margareta [user]... ✗ Failed: Komponen gaji not found
+Processing: Pandu Kusuma [user]... ✗ Failed: Komponen gaji not found
+Processing: Pilar Aforisma [user]... ✓ Success
+Processing: Qory Sandrina [user]... ✗ Failed: Komponen gaji not found
+Processing: Rudi Hermawan [user]... ✗ Failed: Komponen gaji not found
+Processing: Sarah Amelia [user]... ✗ Failed: Komponen gaji not found
+Processing: Siti Nurhaliza [user]... ✗ Failed: Komponen gaji not found
+Processing: superadmin [admin]... ✗ Failed: Komponen gaji not found
+Processing: tesrole [user]... ✗ Failed: Komponen gaji not found
+Processing: Tono Sugiarto [user]... ✗ Failed: Komponen gaji not found
+Processing: Umi Kalsum [user]... ✗ Failed: Komponen gaji not found
+Processing: Victor Ramadhan [user]... ✗ Failed: Komponen gaji not found
+Processing: Wulan Dari [user]... ✗ Failed: Komponen gaji not found
+Processing: Xavier Putra [user]... ✗ Failed: Komponen gaji not found
+Processing: Yuni Shara [user]... ✗ Failed: Komponen gaji not found
+Processing: Zaki Ismail [user]... ✗ Failed: Komponen gaji not found
+
+=== SUMMARY ===
+Success: 5
+Failed: 32
+Completed at: 2025-11-06 13:26:33</span></div><div class='test-result test-pass'>
+        <strong>Slip gaji created</strong> <span style='opacity: 0.8;'>→ ID: 212</span></div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:34</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Gaji Pokok Aktual: Rp 5.000.000</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:34</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Total Pendapatan: Rp 6.016.827</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:34</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Total Potongan: Rp 81.923</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:34</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Gaji Bersih: Rp 5.934.904</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:34</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Overwork: Rp 93.750</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:34</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Potongan Tidak Hadir: Rp 0</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:34</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Potongan Telat > 20: Rp 76.923</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:34</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Potongan Telat < 20: Rp 5.000</span>
+    </div></div></div><div class='test-section'>
+        <h2 class='test-section-header'>Test #13: GENERATE SLIP GAJI</h2>
+        <div class='log-container'><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:34</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Running auto_generate_slipgaji.php...</span>
+    </div><div class='test-result test-pass'>
+        <strong>Execute slip gaji script</strong> <span style='opacity: 0.8;'>→ === AUTO GENERATE SLIP GAJI ===
+Started at: 2025-11-06 13:26:34
+
+Period: 2025-10-28 to 2025-11-27
+Month: 11, Year: 2025
+
+Total employees: 37
+
+Processing: Ahmad Pratama [user]... ✗ Failed: Komponen gaji not found
+Processing: Ayu Ting Ting [user]... ✗ Failed: Komponen gaji not found
+Processing: Bayu Skak [user]... ✗ Failed: Komponen gaji not found
+Processing: Budi Santoso [user]... ✗ Failed: Komponen gaji not found
+Processing: Cinta Laura [user]... ✗ Failed: Komponen gaji not found
+Processing: Denny Caknan [user]... ✗ Failed: Komponen gaji not found
+Processing: Dewi Lestari [user]... ✗ Failed: Komponen gaji not found
+Processing: Dot Pikir [user]... ✓ Success
+Processing: Eko Prasetyo [user]... ✗ Failed: Komponen gaji not found
+Processing: Fitri Handayani [user]... ✗ Failed: Komponen gaji not found
+Processing: Galih Ganji [user]... ✓ Success
+Processing: Gunawan Setiawan [user]... ✗ Failed: Komponen gaji not found
+Processing: Hani Permata [user]... ✗ Failed: Komponen gaji not found
+Processing: Indra Wijaya [user]... ✗ Failed: Komponen gaji not found
+Processing: Julia Rahmawati [user]... ✗ Failed: Komponen gaji not found
+Processing: Kartika Sari [user]... ✗ Failed: Komponen gaji not found
+Processing: Kata Hnaf [user]... ✓ Success
+Processing: Lukman Hakim [user]... ✗ Failed: Komponen gaji not found
+Processing: Maya Angelina [user]... ✗ Failed: Komponen gaji not found
+Processing: Muhammad Abizar Nafara [admin]... ✓ Success
+Processing: Nanda Pratama [user]... ✗ Failed: Komponen gaji not found
+Processing: Olivia Margareta [user]... ✗ Failed: Komponen gaji not found
+Processing: Pandu Kusuma [user]... ✗ Failed: Komponen gaji not found
+Processing: Pilar Aforisma [user]... ✓ Success
+Processing: Qory Sandrina [user]... ✗ Failed: Komponen gaji not found
+Processing: Rudi Hermawan [user]... ✗ Failed: Komponen gaji not found
+Processing: Sarah Amelia [user]... ✗ Failed: Komponen gaji not found
+Processing: Siti Nurhaliza [user]... ✗ Failed: Komponen gaji not found
+Processing: superadmin [admin]... ✗ Failed: Komponen gaji not found
+Processing: tesrole [user]... ✗ Failed: Komponen gaji not found
+Processing: Tono Sugiarto [user]... ✗ Failed: Komponen gaji not found
+Processing: Umi Kalsum [user]... ✗ Failed: Komponen gaji not found
+Processing: Victor Ramadhan [user]... ✗ Failed: Komponen gaji not found
+Processing: Wulan Dari [user]... ✗ Failed: Komponen gaji not found
+Processing: Xavier Putra [user]... ✗ Failed: Komponen gaji not found
+Processing: Yuni Shara [user]... ✗ Failed: Komponen gaji not found
+Processing: Zaki Ismail [user]... ✗ Failed: Komponen gaji not found
+
+=== SUMMARY ===
+Success: 5
+Failed: 32
+Completed at: 2025-11-06 13:26:35</span></div><div class='test-result test-pass'>
+        <strong>Slip gaji created</strong> <span style='opacity: 0.8;'>→ ID: 216</span></div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:35</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Gaji Pokok Aktual: Rp 5.000.000</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:35</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Total Pendapatan: Rp 5.980.769</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:35</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Total Potongan: Rp 974.231</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:35</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Gaji Bersih: Rp 5.006.538</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:35</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Overwork: Rp 0</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:35</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Potongan Tidak Hadir: Rp 950.000</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:35</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Potongan Telat > 20: Rp 19.231</span>
+    </div><div class='log-entry log-info'>
+        <span class='log-timestamp'>2025-11-06 13:26:35</span>
+        <span class='log-level'>INFO</span>
+        <span class='log-message'>Potongan Telat < 20: Rp 5.000</span>
+    </div></div></div><div class='test-section'>
+        <h2 class='test-section-header'>Test #14: SEND EMAIL TESTS</h2>
+        <div class='log-container'></div></div><div class='test-section'>
+        <h2 class='test-section-header'>Test #15: SEND EMAIL TEST</h2>
+        <div class='log-container'><div class='test-result test-pass'>
+        <strong>Get slip gaji data</strong></div><div class='test-result test-pass'>
+        <strong>Send email to katahnaf@gmail.com</strong></div><div class='log-entry log-success'>
+        <span class='log-timestamp'>2025-11-06 13:26:39</span>
+        <span class='log-level'>SUCCESS</span>
+        <span class='log-message'>Email sent flag updated in database</span>
+    </div></div></div><div class='test-section'>
+        <h2 class='test-section-header'>Test #16: SEND EMAIL TEST</h2>
+        <div class='log-container'><div class='test-result test-pass'>
+        <strong>Get slip gaji data</strong></div><div class='test-result test-pass'>
+        <strong>Send email to pilaraforismacinta@gmail.com</strong></div><div class='log-entry log-success'>
+        <span class='log-timestamp'>2025-11-06 13:26:45</span>
+        <span class='log-level'>SUCCESS</span>
+        <span class='log-message'>Email sent flag updated in database</span>
+    </div></div></div><div class='test-section'>
+        <h2 class='test-section-header'>Test #17: SEND EMAIL TEST</h2>
+        <div class='log-container'><div class='test-result test-pass'>
+        <strong>Get slip gaji data</strong></div><div class='test-result test-pass'>
+        <strong>Send email to galihganji@gmail.com</strong></div><div class='log-entry log-success'>
+        <span class='log-timestamp'>2025-11-06 13:26:52</span>
+        <span class='log-level'>SUCCESS</span>
+        <span class='log-message'>Email sent flag updated in database</span>
+    </div></div></div><div class='test-section'>
+        <h2 class='test-section-header'>Test #18: SEND EMAIL TEST</h2>
+        <div class='log-container'><div class='test-result test-pass'>
+        <strong>Get slip gaji data</strong></div><div class='test-result test-pass'>
+        <strong>Send email to dotpikir@gmail.com</strong></div><div class='log-entry log-success'>
+        <span class='log-timestamp'>2025-11-06 13:26:58</span>
+        <span class='log-level'>SUCCESS</span>
+        <span class='log-message'>Email sent flag updated in database</span>
+    </div></div></div>    <div class="summary">
+        <h2>📊 TEST SUMMARY</h2>
+        
+        <div class="summary-stats">
+            <div class="stat-card">
+                <div class="stat-label">Total Tests</div>
+                <div class="stat-value">46</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">✓ Passed</div>
+                <div class="stat-value" style="color: #4CAF50;">46</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">✗ Failed</div>
+                <div class="stat-value" style="color: #4CAF50;">
+                    0                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Pass Rate</div>
+                <div class="stat-value">100%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Duration</div>
+                <div class="stat-value" style="font-size: 2em;">35.73s</div>
+            </div>
+        </div>
+        
+                
+        <div class="manual-steps">
+            <h3>📋 Manual Verification Steps</h3>
+            <ol>
+                <li>Check <strong>mainpageadmin.php</strong> for overview statistics</li>
+                <li>Check <strong>view_absensi.php</strong> for attendance records</li>
+                <li>Check <strong>jadwal_shift.php</strong> for shift assignments</li>
+                <li>Check <strong>approve.php</strong> for leave requests</li>
+                <li>Check <strong>slip_gaji_management.php</strong> for generated salary slips</li>
+                <li>Check email inboxes for salary slip emails</li>
+            </ol>
+        </div>
+        
+        <div class="test-users">
+            <h4>👥 Test Users Created:</h4>
+            <ul>
+                                    <li>
+                        <strong>Kata Hnaf</strong> 
+                        (katahnaf@gmail.com) 
+                        - ID: 107                    </li>
+                                    <li>
+                        <strong>Pilar Aforisma</strong> 
+                        (pilaraforismacinta@gmail.com) 
+                        - ID: 108                    </li>
+                                    <li>
+                        <strong>Galih Ganji</strong> 
+                        (galihganji@gmail.com) 
+                        - ID: 109                    </li>
+                                    <li>
+                        <strong>Dot Pikir</strong> 
+                        (dotpikir@gmail.com) 
+                        - ID: 110                    </li>
+                            </ul>
+            <p style="margin-top: 15px; opacity: 0.9;">
+                Password for all test users: <code style="background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 3px;">Test123!</code>
+            </p>
+        </div>
+    </div>
+    
+    </div> <!-- Close test-content -->
+    
+    <div class="footer">
+        <p><strong>KAORI Integration Test Suite v1.0</strong></p>
+        <p>Generated on 2025-11-06 13:27:00</p>
+        <p style="margin-top: 10px; opacity: 0.7;">
+            © 2024 KAORI Indonesia. All rights reserved.
+        </p>
+    </div>
+    
+    </div> <!-- Close container -->
+</body>
+</html>
+    

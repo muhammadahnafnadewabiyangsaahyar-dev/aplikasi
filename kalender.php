@@ -273,6 +273,7 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     <script src="script_kalender_summary.js"></script>
     <script src="script_kalender_assign.js"></script>
     <script src="script_kalender_delete.js"></script>
+    <script src="script_kalender_izin_sakit.js"></script>
     <script src="script_kalender_core.js"></script>
 </body>
 </html>

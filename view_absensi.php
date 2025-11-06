@@ -18,13 +18,12 @@ $bulan = isset($_GET['bulan']) ? (int)$_GET['bulan'] : (int)date('m');
 $tahun = isset($_GET['tahun']) ? (int)$_GET['tahun'] : (int)date('Y');
 
 // --- Query absensi bulanan ---
-// FIX: Update query untuk menggunakan foto_absen_masuk dan foto_absen_keluar
+// FIX: Update query untuk menggunakan nama kolom yang benar
 $sql_absensi = "SELECT a.id, a.tanggal_absensi, a.waktu_masuk, a.waktu_keluar, a.status_lokasi, 
                        a.foto_absen_masuk, a.foto_absen_keluar, 
-                       a.latitude_absen_masuk, a.longitude_absen_masuk,
-                       a.latitude_absen_keluar, a.longitude_absen_keluar,
+                       a.latitude_absen, a.longitude_absen,
                        a.menit_terlambat, a.status_keterlambatan, a.potongan_tunjangan,
-                       a.status_lembur, a.user_id, r.nama_lengkap, c.jam_keluar 
+                       a.status_lembur, a.status_kehadiran, a.user_id, r.nama_lengkap, c.jam_keluar 
                 FROM absensi a 
                 JOIN register r ON a.user_id = r.id 
                 LEFT JOIN cabang c ON c.id = 1
@@ -38,6 +37,14 @@ $daftar_absensi = $stmt_absensi->fetchAll(PDO::FETCH_ASSOC);
 foreach ($daftar_absensi as &$absensi) {
     $absensi['status_kehadiran_calculated'] = hitungStatusKehadiran($absensi, $pdo);
 }
+
+// --- PAGINATION UNTUK TABEL 1 (Riwayat Bulanan) ---
+$items_per_page_tabel1 = 10; // Maksimal 10 data per halaman
+$page_tabel1 = isset($_GET['page1']) ? max(1, (int)$_GET['page1']) : 1;
+$total_items_tabel1 = count($daftar_absensi);
+$total_pages_tabel1 = ceil($total_items_tabel1 / $items_per_page_tabel1);
+$offset_tabel1 = ($page_tabel1 - 1) * $items_per_page_tabel1;
+$daftar_absensi_paginated = array_slice($daftar_absensi, $offset_tabel1, $items_per_page_tabel1);
 
 // --- Ambil daftar nama unik dan tanggal unik dari $daftar_absensi
 $daftar_nama = [];
@@ -55,17 +62,32 @@ sort($daftar_tanggal);
 
 // --- Query rekap harian: seluruh user, status absen hari ini ---
 $tgl_hari_ini = date('Y-m-d');
-$sql_rekap = "SELECT r.id, r.nama_lengkap, a.id AS absen_id, a.waktu_masuk, a.waktu_keluar, a.status_lembur
+$sql_rekap = "SELECT 
+    r.id, 
+    r.nama_lengkap, 
+    a.id AS absen_id, 
+    a.waktu_masuk, 
+    a.waktu_keluar, 
+    a.status_lembur,
+    a.status_kehadiran
 FROM register r
-LEFT JOIN absensi a ON a.id = (
-    SELECT id FROM absensi 
-    WHERE user_id = r.id AND tanggal_absensi = ? 
-    ORDER BY waktu_keluar DESC, waktu_masuk ASC, id DESC LIMIT 1
+LEFT JOIN absensi a ON a.user_id = r.id AND a.tanggal_absensi = ?
+WHERE r.role != 'admin' OR r.id IN (
+    SELECT user_id FROM absensi WHERE tanggal_absensi = ?
 )
+GROUP BY r.id, r.nama_lengkap, a.id, a.waktu_masuk, a.waktu_keluar, a.status_lembur, a.status_kehadiran
 ORDER BY r.nama_lengkap ASC";
 $stmt_rekap = $pdo->prepare($sql_rekap);
-$stmt_rekap->execute([$tgl_hari_ini]);
+$stmt_rekap->execute([$tgl_hari_ini, $tgl_hari_ini]);
 $rekap_harian = $stmt_rekap->fetchAll(PDO::FETCH_ASSOC);
+
+// --- PAGINATION UNTUK TABEL 2 (Rekap Harian) ---
+$items_per_page_tabel2 = 15; // Maksimal 15 data per halaman
+$page_tabel2 = isset($_GET['page2']) ? max(1, (int)$_GET['page2']) : 1;
+$total_items_tabel2 = count($rekap_harian);
+$total_pages_tabel2 = ceil($total_items_tabel2 / $items_per_page_tabel2);
+$offset_tabel2 = ($page_tabel2 - 1) * $items_per_page_tabel2;
+$rekap_harian_paginated = array_slice($rekap_harian, $offset_tabel2, $items_per_page_tabel2);
 
 // --- Ekspor CSV jika diminta ---
 if (isset($_GET['export']) && $_GET['export'] === 'csv') {
@@ -74,9 +96,9 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     header('Content-Type: text/csv');
     header('Content-Disposition: attachment; filename="riwayat_absensi_' . $bulan_csv . '_' . $tahun_csv . '.csv"');
     $output = fopen('php://output', 'w');
-    // Header kolom - FIX: Pisahkan foto masuk dan keluar
+    // Header kolom - FIX: Gunakan nama kolom yang benar (hanya satu set koordinat)
     fputcsv($output, ['ID', 'Nama Lengkap', 'Tanggal Absensi', 'Waktu Masuk', 'Waktu Keluar', 
-                      'Status Lokasi', 'Foto Masuk', 'Foto Keluar', 'Lat Masuk', 'Lng Masuk', 'Lat Keluar', 'Lng Keluar',
+                      'Status Lokasi', 'Foto Masuk', 'Foto Keluar', 'Latitude', 'Longitude',
                       'Menit Terlambat', 'Status Keterlambatan', 'Potongan Tunjangan', 'Status Kehadiran']);
     foreach ($daftar_absensi as $absensi) {
         fputcsv($output, [
@@ -88,10 +110,8 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
             $absensi['status_lokasi'],
             $absensi['foto_absen_masuk'] ?? '-',
             $absensi['foto_absen_keluar'] ?? '-',
-            $absensi['latitude_absen_masuk'] ?? '-',
-            $absensi['longitude_absen_masuk'] ?? '-',
-            $absensi['latitude_absen_keluar'] ?? '-',
-            $absensi['longitude_absen_keluar'] ?? '-',
+            $absensi['latitude_absen'] ?? '-',
+            $absensi['longitude_absen'] ?? '-',
             $absensi['menit_terlambat'] ?? 0,
             $absensi['status_keterlambatan'] ?? 'tepat waktu',
             $absensi['potongan_tunjangan'] ?? 'tidak ada',
@@ -106,13 +126,12 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv_user' && isset($_GET['nam
     $nama_user = $_GET['nama'];
     $bulan_csv = isset($_GET['bulan']) ? (int)$_GET['bulan'] : (int)date('m');
     $tahun_csv = isset($_GET['tahun']) ? (int)$_GET['tahun'] : (int)date('Y');
-    // FIX: Update query untuk foto masuk dan keluar terpisah
+    // FIX: Update query untuk nama kolom yang benar
     $sql_user = "SELECT a.id, a.tanggal_absensi, a.waktu_masuk, a.waktu_keluar, a.status_lokasi, 
                         a.foto_absen_masuk, a.foto_absen_keluar,
-                        a.latitude_absen_masuk, a.longitude_absen_masuk,
-                        a.latitude_absen_keluar, a.longitude_absen_keluar,
+                        a.latitude_absen, a.longitude_absen,
                         a.menit_terlambat, a.status_keterlambatan, a.potongan_tunjangan,
-                        a.user_id, r.nama_lengkap 
+                        a.status_kehadiran, a.user_id, r.nama_lengkap 
                 FROM absensi a 
                 JOIN register r ON a.user_id = r.id 
                 WHERE r.nama_lengkap = ? AND MONTH(a.tanggal_absensi) = ? AND YEAR(a.tanggal_absensi) = ?
@@ -129,9 +148,9 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv_user' && isset($_GET['nam
     header('Content-Type: text/csv');
     header('Content-Disposition: attachment; filename="absensi_' . urlencode($nama_user) . '_' . $bulan_csv . '_' . $tahun_csv . '.csv"');
     $output = fopen('php://output', 'w');
-    // FIX: Pisahkan foto masuk dan keluar
+    // FIX: Gunakan nama kolom yang benar (hanya satu set koordinat)
     fputcsv($output, ['ID', 'Nama Lengkap', 'Tanggal Absensi', 'Waktu Masuk', 'Waktu Keluar', 
-                      'Status Lokasi', 'Foto Masuk', 'Foto Keluar', 'Lat Masuk', 'Lng Masuk', 'Lat Keluar', 'Lng Keluar',
+                      'Status Lokasi', 'Foto Masuk', 'Foto Keluar', 'Latitude', 'Longitude',
                       'Menit Terlambat', 'Status Keterlambatan', 'Potongan Tunjangan', 'Status Kehadiran']);
     foreach ($absensi_user as $absensi) {
         fputcsv($output, [
@@ -143,10 +162,8 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv_user' && isset($_GET['nam
             $absensi['status_lokasi'],
             $absensi['foto_absen_masuk'] ?? '-',
             $absensi['foto_absen_keluar'] ?? '-',
-            $absensi['latitude_absen_masuk'] ?? '-',
-            $absensi['longitude_absen_masuk'] ?? '-',
-            $absensi['latitude_absen_keluar'] ?? '-',
-            $absensi['longitude_absen_keluar'] ?? '-',
+            $absensi['latitude_absen'] ?? '-',
+            $absensi['longitude_absen'] ?? '-',
             $absensi['menit_terlambat'] ?? 0,
             $absensi['status_keterlambatan'] ?? 'tepat waktu',
             $absensi['potongan_tunjangan'] ?? 'tidak ada',
@@ -174,6 +191,123 @@ sort($daftar_nama_harian);
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
     <title>Daftar Absensi</title>
+    <style>
+        /* CRITICAL: Override style.css to remove ALL scrollbars */
+        body .table-container {
+            overflow: visible !important;
+            max-height: none !important;
+        }
+        
+        /* Fixed table styling - ABSOLUTELY NO SCROLLBAR */
+        .table-wrapper {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: visible !important;
+            max-height: none !important;
+            height: auto !important;
+        }
+        
+        .table-wrapper table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: auto;
+            overflow: visible !important;
+        }
+        
+        .table-wrapper thead {
+            background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .table-wrapper thead th {
+            padding: 12px 8px;
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 2px solid #dee2e6;
+            white-space: nowrap;
+        }
+        
+        .table-wrapper tbody tr:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .table-wrapper tbody td {
+            padding: 10px 8px;
+            vertical-align: middle;
+        }
+        
+        /* Ensure NO scrolling anywhere */
+        .user-table, .rekap-harian-table {
+            overflow: visible !important;
+            display: table !important;
+        }
+        
+        .user-table tbody, .rekap-harian-table tbody {
+            overflow: visible !important;
+        }
+        
+        /* Pagination styling */
+        .pagination-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .pagination-wrapper {
+            display: inline-flex;
+            gap: 10px;
+            align-items: center;
+            background: #f8f9fa;
+            padding: 12px 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .pagination-btn {
+            padding: 10px 20px;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .pagination-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .pagination-btn.prev {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .pagination-btn.next {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .pagination-info {
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .pagination-info small {
+            color: #666;
+            font-weight: normal;
+        }
+        
+        /* Responsive table */
+        @media screen and (max-width: 1200px) {
+            .table-wrapper {
+                max-height: 500px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="headercontainer">
@@ -234,7 +368,8 @@ sort($daftar_nama_harian);
                 </select>
             </label>
         </div>
-        <?php if (!empty($daftar_absensi)): ?>
+        <?php if (!empty($daftar_absensi_paginated)): ?>
+            <div class="table-wrapper">
             <table class="user-table">
                 <thead>
                     <tr>
@@ -253,7 +388,7 @@ sort($daftar_nama_harian);
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($daftar_absensi as $absensi): ?>
+                    <?php foreach ($daftar_absensi_paginated as $absensi): ?>
                     <?php if (empty($_GET['nama']) || $absensi['nama_lengkap'] === $_GET['nama']): ?>
                     <tr>
                         <td><?php echo htmlspecialchars($absensi['id']); ?></td>
@@ -424,57 +559,165 @@ sort($daftar_nama_harian);
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            </div>
+            
+            <!-- Pagination Tabel 1 -->
+            <?php if ($total_pages_tabel1 > 1): ?>
+            <div class="pagination-container">
+                <div class="pagination-wrapper">
+                    <?php if ($page_tabel1 > 1): ?>
+                        <a href="?bulan=<?php echo $bulan; ?>&tahun=<?php echo $tahun; ?>&page1=<?php echo $page_tabel1 - 1; ?><?php echo isset($_GET['page2']) ? '&page2=' . $_GET['page2'] : ''; ?><?php echo isset($_GET['nama']) ? '&nama=' . urlencode($_GET['nama']) : ''; ?>" 
+                           class="pagination-btn prev">
+                            <i class="fas fa-chevron-left"></i> Sebelumnya
+                        </a>
+                    <?php endif; ?>
+                    
+                    <span class="pagination-info">
+                        Halaman <?php echo $page_tabel1; ?> dari <?php echo $total_pages_tabel1; ?> 
+                        <small>(<?php echo $total_items_tabel1; ?> data)</small>
+                    </span>
+                    
+                    <?php if ($page_tabel1 < $total_pages_tabel1): ?>
+                        <a href="?bulan=<?php echo $bulan; ?>&tahun=<?php echo $tahun; ?>&page1=<?php echo $page_tabel1 + 1; ?><?php echo isset($_GET['page2']) ? '&page2=' . $_GET['page2'] : ''; ?><?php echo isset($_GET['nama']) ? '&nama=' . urlencode($_GET['nama']) : ''; ?>" 
+                           class="pagination-btn next">
+                            Selanjutnya <i class="fas fa-chevron-right"></i>
+                        </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
         <?php else: ?>
             <p>Belum ada data absensi untuk bulan dan tahun ini.</p>
         <?php endif; ?>
     </div>
 
     <div class="table-container" style="margin-top: 40px;">
-        <h2 class="table-title">Rekap Absensi Harian (<?php echo date('d-m-Y'); ?>)</h2>
+        <h2 class="table-title">📊 Rekap Absensi Harian (<?php echo date('d-m-Y'); ?>)</h2>
+        <p style="margin-bottom: 15px; color: #666;">
+            <i class="fas fa-info-circle"></i> Menampilkan status kehadiran semua pegawai untuk hari ini
+        </p>
+        
+        <?php
+        // Hitung statistik
+        $total_pegawai = count($rekap_harian);
+        $sudah_absen_masuk = 0;
+        $sudah_absen_keluar = 0;
+        $belum_absen = 0;
+        
+        foreach ($rekap_harian as $row) {
+            if (!is_null($row['absen_id'])) {
+                $sudah_absen_masuk++;
+                if (!empty($row['waktu_keluar'])) {
+                    $sudah_absen_keluar++;
+                }
+            } else {
+                $belum_absen++;
+            }
+        }
+        ?>
+        
+        <!-- Statistik Ringkas -->
+        <div style="display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
+            <div style="background: #f0f8ff; padding: 15px; border-radius: 8px; flex: 1; min-width: 150px; border-left: 4px solid #2196F3;">
+                <div style="font-size: 24px; font-weight: bold; color: #2196F3;"><?php echo $total_pegawai; ?></div>
+                <div style="font-size: 14px; color: #666;">Total Pegawai</div>
+            </div>
+            <div style="background: #f0fff4; padding: 15px; border-radius: 8px; flex: 1; min-width: 150px; border-left: 4px solid #4CAF50;">
+                <div style="font-size: 24px; font-weight: bold; color: #4CAF50;"><?php echo $sudah_absen_masuk; ?></div>
+                <div style="font-size: 14px; color: #666;">Sudah Absen Masuk</div>
+            </div>
+            <div style="background: #fff8e1; padding: 15px; border-radius: 8px; flex: 1; min-width: 150px; border-left: 4px solid #FF9800;">
+                <div style="font-size: 24px; font-weight: bold; color: #FF9800;"><?php echo $sudah_absen_keluar; ?></div>
+                <div style="font-size: 14px; color: #666;">Sudah Absen Keluar</div>
+            </div>
+            <div style="background: #ffebee; padding: 15px; border-radius: 8px; flex: 1; min-width: 150px; border-left: 4px solid #f44336;">
+                <div style="font-size: 24px; font-weight: bold; color: #f44336;"><?php echo $belum_absen; ?></div>
+                <div style="font-size: 14px; color: #666;">Belum Absen</div>
+            </div>
+        </div>
+        
         <!-- Filter kolom untuk tabel 2 -->
         <div style="margin-bottom:10px;">
             <label>Filter Nama:
-                <select id="filterNama2" onchange="filterTableDropdown('filterNama2','.user-table:last-of-type',0)">
+                <select id="filterNama2" onchange="filterTableDropdown('filterNama2','.rekap-harian-table',0)">
                     <option value="">-- Semua --</option>
                     <?php foreach ($daftar_nama_harian as $nama): ?>
                         <option value="<?php echo htmlspecialchars($nama); ?>"><?php echo htmlspecialchars($nama); ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
+            <label style="margin-left: 20px;">Filter Status:
+                <select id="filterStatus2" onchange="filterStatusAbsen()">
+                    <option value="">-- Semua --</option>
+                    <option value="sudah">Sudah Absen</option>
+                    <option value="belum">Belum Absen</option>
+                    <option value="keluar">Sudah Keluar</option>
+                    <option value="belum_keluar">Belum Keluar</option>
+                </select>
+            </label>
         </div>
-        <table class="user-table">
+        <div class="table-wrapper">
+        <table class="rekap-harian-table" style="width: 100%;">
             <thead>
                 <tr>
                     <th>Nama Lengkap</th>
-                    <th>Status Absen Hari Ini</th>
+                    <th>Status Absen</th>
                     <th>Waktu Masuk</th>
                     <th>Waktu Keluar</th>
-                    <th>Status Overwork</th>
+                    <th>Status Kehadiran</th>
+                    <th>Overwork</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($rekap_harian as $row): ?>
-                <tr>
+                <?php foreach ($rekap_harian_paginated as $row): ?>
+                <tr data-status="<?php echo !is_null($row['absen_id']) ? 'sudah' : 'belum'; ?>" 
+                    data-keluar="<?php echo !empty($row['waktu_keluar']) ? 'keluar' : 'belum_keluar'; ?>">
                     <td><?php echo htmlspecialchars($row['nama_lengkap']); ?></td>
                     <td>
                         <?php if (!is_null($row['absen_id'])): ?>
-                            <span style="color:green;font-weight:bold;">Sudah Absen</span>
+                            <?php if (!empty($row['waktu_keluar'])): ?>
+                                <span style="color:#4CAF50;font-weight:bold;">✓ Sudah Absen Masuk & Keluar</span>
+                            <?php else: ?>
+                                <span style="color:#FF9800;font-weight:bold;">⚠ Sudah Masuk, Belum Keluar</span>
+                            <?php endif; ?>
                         <?php else: ?>
-                            <span style="color:red;font-weight:bold;">Belum Absen</span>
+                            <span style="color:#f44336;font-weight:bold;">✗ Belum Absen Masuk</span>
                         <?php endif; ?>
                     </td>
-                    <td><?php echo $row['waktu_masuk'] ? htmlspecialchars(date('H:i', strtotime($row['waktu_masuk']))) : '-'; ?></td>
-                    <td><?php echo $row['waktu_keluar'] ? htmlspecialchars(date('H:i', strtotime($row['waktu_keluar']))) : '-'; ?></td>
+                    <td><?php echo $row['waktu_masuk'] ? htmlspecialchars(date('H:i', strtotime($row['waktu_masuk']))) : '<span style="color:#999;">-</span>'; ?></td>
+                    <td><?php echo $row['waktu_keluar'] ? htmlspecialchars(date('H:i', strtotime($row['waktu_keluar']))) : '<span style="color:#999;">-</span>'; ?></td>
+                    <td>
+                        <?php 
+                        if (!is_null($row['absen_id'])) {
+                            $status = $row['status_kehadiran'] ?? 'Belum Absen Keluar';
+                            if ($status == 'Hadir') {
+                                echo '<span style="color:#4CAF50;font-weight:bold;">✓ Hadir</span>';
+                            } elseif ($status == 'Tidak Hadir') {
+                                echo '<span style="color:#f44336;font-weight:bold;">✗ Tidak Hadir</span>';
+                            } elseif ($status == 'Belum Absen Keluar') {
+                                echo '<span style="color:#FF9800;font-weight:bold;">⏳ Belum Keluar</span>';
+                            } else {
+                                echo '<span style="color:#666;">' . htmlspecialchars($status) . '</span>';
+                            }
+                        } else {
+                            echo '<span style="color:#999;">-</span>';
+                        }
+                        ?>
+                    </td>
                     <td>
                         <?php
                         if (!is_null($row['absen_id'])) {
-                            if ($row['status_lembur'] === 'Pending' || $row['status_lembur'] === 'Approved') {
-                                echo '<span style="color:orange;font-weight:bold;">Overwork</span>';
+                            if ($row['status_lembur'] === 'Pending') {
+                                echo '<span style="color:#FF9800;font-weight:bold;">⏳ Pending</span>';
+                            } elseif ($row['status_lembur'] === 'Approved') {
+                                echo '<span style="color:#4CAF50;font-weight:bold;">✓ Approved</span>';
+                            } elseif ($row['status_lembur'] === 'Rejected') {
+                                echo '<span style="color:#f44336;font-weight:bold;">✗ Rejected</span>';
                             } else {
-                                echo '-';
+                                echo '<span style="color:#999;">-</span>';
                             }
                         } else {
-                            echo '-';
+                            echo '<span style="color:#999;">-</span>';
                         }
                         ?>
                     </td>
@@ -482,6 +725,33 @@ sort($daftar_nama_harian);
                 <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
+        
+        <!-- Pagination Tabel 2 -->
+        <?php if ($total_pages_tabel2 > 1): ?>
+        <div style="margin-top: 20px; text-align: center;">
+            <div style="display: inline-flex; gap: 10px; align-items: center; background: #f5f5f5; padding: 10px 20px; border-radius: 8px;">
+                <?php if ($page_tabel2 > 1): ?>
+                    <a href="?bulan=<?php echo $bulan; ?>&tahun=<?php echo $tahun; ?>&page2=<?php echo $page_tabel2 - 1; ?><?php echo isset($_GET['page1']) ? '&page1=' . $_GET['page1'] : ''; ?><?php echo isset($_GET['nama']) ? '&nama=' . urlencode($_GET['nama']) : ''; ?>" 
+                       style="padding: 8px 16px; background: #2196F3; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                        ← Sebelumnya
+                    </a>
+                <?php endif; ?>
+                
+                <span style="padding: 8px 16px; background: white; border: 2px solid #2196F3; border-radius: 4px; font-weight: bold;">
+                    Halaman <?php echo $page_tabel2; ?> dari <?php echo $total_pages_tabel2; ?> 
+                    <small style="color: #666;">(<?php echo $total_items_tabel2; ?> pegawai)</small>
+                </span>
+                
+                <?php if ($page_tabel2 < $total_pages_tabel2): ?>
+                    <a href="?bulan=<?php echo $bulan; ?>&tahun=<?php echo $tahun; ?>&page2=<?php echo $page_tabel2 + 1; ?><?php echo isset($_GET['page1']) ? '&page1=' . $_GET['page1'] : ''; ?><?php echo isset($_GET['nama']) ? '&nama=' . urlencode($_GET['nama']) : ''; ?>" 
+                       style="padding: 8px 16px; background: #2196F3; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                        Selanjutnya →
+                    </a>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
     <script>
     // Filter kolom untuk dua tabel
@@ -510,6 +780,35 @@ sort($daftar_nama_harian);
                 var txt = tds[colIdx].textContent || tds[colIdx].innerText;
                 trs[i].style.display = (!filter || txt.toLowerCase() === filter) ? '' : 'none';
             }
+        }
+    }
+    
+    // Filter status absen untuk rekap harian
+    function filterStatusAbsen() {
+        var select = document.getElementById('filterStatus2');
+        var filter = select.value;
+        var table = document.querySelector('.rekap-harian-table');
+        var trs = table.getElementsByTagName('tr');
+        
+        for (var i = 1; i < trs.length; i++) {
+            var row = trs[i];
+            var statusAbsen = row.getAttribute('data-status');
+            var statusKeluar = row.getAttribute('data-keluar');
+            var show = false;
+            
+            if (!filter) {
+                show = true;
+            } else if (filter === 'sudah' && statusAbsen === 'sudah') {
+                show = true;
+            } else if (filter === 'belum' && statusAbsen === 'belum') {
+                show = true;
+            } else if (filter === 'keluar' && statusKeluar === 'keluar') {
+                show = true;
+            } else if (filter === 'belum_keluar' && statusAbsen === 'sudah' && statusKeluar === 'belum_keluar') {
+                show = true;
+            }
+            
+            row.style.display = show ? '' : 'none';
         }
     }
     </script>

@@ -30,13 +30,21 @@ if ($is_logged_in) {
     // URL Halaman Utama untuk yang sudah login
     $mainpage_url = 'mainpage.php';
 
-    // --- PERBAIKAN: Link ini sekarang untuk SEMUA user yang login (User & Admin) ---
+    // --- Link untuk SEMUA user yang login (User & Admin) ---
     $profile_url = 'profile.php';
-    $surat_url = 'suratizin.php';
+    $surat_url = 'ajukan_izin_sakit.php'; // Updated: Form baru untuk izin/sakit
     $absen_url = 'absen.php';
     $rekapabsen_url = 'rekapabsen.php';
-    $slipgaji_url = 'slipgaji.php';
     $shift_confirmation_url = 'shift_confirmation.php'; // Konfirmasi shift untuk semua user
+    
+    // --- Slip Gaji: Different URLs based on role ---
+    if ($_SESSION['role'] == 'admin') {
+        // Admin menggunakan halaman management (full features)
+        $slipgaji_url = 'slip_gaji_management.php';
+    } else {
+        // User biasa menggunakan halaman view-only
+        $slipgaji_url = 'slipgaji.php';
+    }
 
     // --- Link yang HANYA dimiliki ADMIN ---
     if ($_SESSION['role'] == 'admin') {
@@ -60,7 +68,7 @@ if ($is_logged_in) {
         <?php if ($is_logged_in): ?>
             
             <a href="<?php echo $profile_url; ?>" class="profile">Profile</a>
-            <a href="<?php echo $surat_url; ?>" class="surat">Surat Izin</a>
+            <a href="<?php echo $surat_url; ?>" class="surat">Ajukan Izin/Sakit</a>
             <a href="<?php echo $absen_url; ?>" class="absensi">Absensi</a>
             <a href="<?php echo $rekapabsen_url; ?>" class="rekapabsen">Rekap Absensi</a>
             <a href="<?php echo $slipgaji_url; ?>" class="slipgaji">Slip Gaji</a>

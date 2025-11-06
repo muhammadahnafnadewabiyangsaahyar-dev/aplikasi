@@ -1295,6 +1295,48 @@ background-color: #dc3545;
     }
 }
 
+/* Badge Izin/Sakit di Kalender */
+.badge-izin,
+.badge-sakit {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 600;
+    margin: 2px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.badge-izin {
+    background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+    color: white;
+    border: 1px solid #1565C0;
+}
+
+.badge-sakit {
+    background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+    color: white;
+    border: 1px solid #c62828;
+}
+
+.badge-izin i,
+.badge-sakit i {
+    margin-right: 4px;
+    background: transparent;
+    color: inherit;
+}
+
+/* Hover effect untuk badge */
+.badge-izin:hover,
+.badge-sakit:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    cursor: help;
+}
+
 /* Pegawai Card Styles for Assign Shift Modal */
 .pegawai-card {
     background-color: white;

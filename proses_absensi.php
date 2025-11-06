@@ -2,6 +2,7 @@
 session_start();
 include 'connect.php';
 include 'absen_helper.php';
+include 'security_helper.php'; // Load security functions
 header('Content-Type: application/json');
 
 // ========================================================
@@ -144,6 +145,64 @@ if (!empty($foto_base64)) {
         send_json(['status'=>'error','message'=>'Ukuran foto terlalu besar (maksimal 5MB). Silakan coba lagi.']);
     }
 }
+
+// ========================================================
+// 4.7. SECURITY CHECKS
+// ========================================================
+
+// A. Detect Mock Location (if additional params provided from client)
+$accuracy = $_POST['accuracy'] ?? null;
+$provider = $_POST['provider'] ?? null;
+
+if ($accuracy !== null || $provider !== null) {
+    $mock_check = SecurityHelper::detectMockLocation($latitude_pengguna, $longitude_pengguna, $accuracy, $provider);
+    
+    log_absen("🔒 Mock Location Check", $mock_check);
+    
+    if ($mock_check['is_suspicious'] && $mock_check['risk_level'] === 'HIGH') {
+        SecurityHelper::logSuspiciousActivity($user_id, 'possible_mock_location', [
+            'latitude' => $latitude_pengguna,
+            'longitude' => $longitude_pengguna,
+            'accuracy' => $accuracy,
+            'provider' => $provider,
+            'flags' => $mock_check['flags']
+        ]);
+        
+        log_absen("❌ Mock location detected - HIGH RISK", $mock_check);
+        send_json([
+            'status' => 'error',
+            'message' => 'Lokasi terdeteksi mencurigakan. Pastikan Anda menggunakan GPS asli dan tidak menggunakan aplikasi mock location.'
+        ]);
+    }
+}
+
+// B. Detect Time Manipulation (if client sends timestamp)
+$client_timestamp = $_POST['client_timestamp'] ?? time();
+
+$time_check = SecurityHelper::detectTimeManipulation($client_timestamp);
+
+log_absen("🔒 Time Manipulation Check", $time_check);
+
+if ($time_check['is_manipulated']) {
+    SecurityHelper::logSuspiciousActivity($user_id, 'time_manipulation_detected', [
+        'server_time' => $time_check['server_time'],
+        'client_time' => $time_check['client_time'],
+        'difference' => $time_check['time_difference_seconds']
+    ]);
+    
+    log_absen("⚠️ Time manipulation detected", $time_check);
+    send_json([
+        'status' => 'error',
+        'message' => 'Waktu perangkat Anda tidak sinkron dengan server. Pastikan waktu perangkat sudah benar atau hubungi admin.'
+    ]);
+}
+
+// C. Sanitize all input data
+$latitude_pengguna = SecurityHelper::sanitizeSQL($latitude_pengguna);
+$longitude_pengguna = SecurityHelper::sanitizeSQL($longitude_pengguna);
+$tipe_absen = SecurityHelper::sanitizeSQL($tipe_absen);
+
+log_absen("✅ Security checks passed");
 
 // ========================================================
 // 4.6. VALIDASI JAM ABSEN (07:00 - 23:59)

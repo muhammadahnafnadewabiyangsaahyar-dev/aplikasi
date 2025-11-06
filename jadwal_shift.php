@@ -47,6 +47,22 @@ $declined_shifts = array_filter($shifts, fn($s) => $s['status_konfirmasi'] === '
     <title>Jadwal Shift Saya - <?= htmlspecialchars($nama_lengkap) ?></title>
     <link rel="stylesheet" href="style.css?v=<?= time() ?>">
     <link rel="stylesheet" href="style_jadwal_shift.css?v=<?= time() ?>">
+    <style>
+        /* Override to prevent scrollbars */
+        .shift-container {
+            overflow: visible !important;
+        }
+        
+        .calendar-wrapper {
+            overflow: visible !important;
+            overflow-x: visible !important;
+            overflow-y: visible !important;
+        }
+        
+        .calendar-table {
+            overflow: visible !important;
+        }
+    </style>
 </head>
 <body>
     <?php include 'navbar.php'; ?>
