@@ -30,7 +30,7 @@ if ($absen_status['masuk'] && !$absen_status['keluar']) {
     $label_default = 'Absensi Selesai';
 }
 
-$home_url = ($_SESSION['role'] ?? '') === 'admin' ? 'mainpageadmin.php' : 'mainpageuser.php';
+$home_url = 'mainpage.php'; // Unified page for both admin and user
 ?>
 
 <!DOCTYPE html>

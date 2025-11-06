@@ -40,7 +40,7 @@ log_absen("🚀 ABSEN PROCESS START", [
     'request_method' => $_SERVER['REQUEST_METHOD']
 ]);
 
-$home_url = ($_SESSION['role'] ?? '') === 'admin' ? 'mainpageadmin.php' : 'mainpageuser.php';
+$home_url = 'mainpage.php'; // Unified page for both admin and user
 
 // 2. Proses hanya jika metode POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -206,47 +206,57 @@ log_absen("✅ Security checks passed");
 
 // ========================================================
 // 4.6. VALIDASI JAM ABSEN (07:00 - 23:59)
-// Berlaku untuk SEMUA user (admin & non-admin)
-// CATATAN: Admin tetap harus mengikuti jam operasional
+// ADMIN: SKIP validasi jam (flexible 24/7)
+// USER: Wajib mengikuti jam operasional
 // ========================================================
-$jam_sekarang = date('H:i:s');
-$jam_minimal = '07:00:00';
-$jam_maksimal = '23:59:59';
+if ($user_role !== 'admin') {
+    // Hanya validasi untuk USER biasa
+    $jam_sekarang = date('H:i:s');
+    $jam_minimal = '07:00:00';
+    $jam_maksimal = '23:59:59';
 
-// Convert to timestamp for more reliable comparison
-$jam_sekarang_ts = strtotime($jam_sekarang);
-$jam_minimal_ts = strtotime($jam_minimal);
-$jam_maksimal_ts = strtotime($jam_maksimal);
+    // Convert to timestamp for more reliable comparison
+    $jam_sekarang_ts = strtotime($jam_sekarang);
+    $jam_minimal_ts = strtotime($jam_minimal);
+    $jam_maksimal_ts = strtotime($jam_maksimal);
 
-$is_within_hours = ($jam_sekarang_ts >= $jam_minimal_ts && $jam_sekarang_ts <= $jam_maksimal_ts);
+    $is_within_hours = ($jam_sekarang_ts >= $jam_minimal_ts && $jam_sekarang_ts <= $jam_maksimal_ts);
 
-log_absen("⏰ Time validation (STRICT MODE)", [
-    'current_time' => $jam_sekarang,
-    'current_time_ts' => $jam_sekarang_ts,
-    'min_time' => $jam_minimal,
-    'min_time_ts' => $jam_minimal_ts,
-    'max_time' => $jam_maksimal,
-    'max_time_ts' => $jam_maksimal_ts,
-    'is_valid' => $is_within_hours,
-    'user_id' => $user_id,
-    'user_role' => $user_role
-]);
-
-if (!$is_within_hours) {
-    log_absen("❌ Time validation FAILED - REJECTED", [
+    log_absen("⏰ Time validation (USER MODE)", [
         'current_time' => $jam_sekarang,
+        'current_time_ts' => $jam_sekarang_ts,
+        'min_time' => $jam_minimal,
+        'min_time_ts' => $jam_minimal_ts,
+        'max_time' => $jam_maksimal,
+        'max_time_ts' => $jam_maksimal_ts,
+        'is_valid' => $is_within_hours,
         'user_id' => $user_id,
-        'user_role' => $user_role,
-        'reason' => 'Outside operational hours (07:00-23:59)'
+        'user_role' => $user_role
     ]);
-    
-    send_json([
-        'status' => 'error',
-        'message' => 'Absensi hanya dapat dilakukan antara jam 07:00 - 23:59. Waktu sekarang: ' . date('H:i') . '. Silakan coba lagi saat jam operasional.'
+
+    if (!$is_within_hours) {
+        log_absen("❌ Time validation FAILED - REJECTED", [
+            'current_time' => $jam_sekarang,
+            'user_id' => $user_id,
+            'user_role' => $user_role,
+            'reason' => 'Outside operational hours (07:00-23:59)'
+        ]);
+        
+        send_json([
+            'status' => 'error',
+            'message' => 'Absensi hanya dapat dilakukan antara jam 07:00 - 23:59. Waktu sekarang: ' . date('H:i') . '. Silakan coba lagi saat jam operasional.'
+        ]);
+    }
+
+    log_absen("✅ Time validation PASSED (USER)", ['current_time' => $jam_sekarang]);
+} else {
+    // Admin: SKIP time validation (flexible 24/7)
+    log_absen("✅ Time validation SKIPPED (ADMIN - Flexible Hours)", [
+        'user_role' => $user_role,
+        'current_time' => date('H:i:s'),
+        'note' => 'Admin can work anytime'
     ]);
 }
-
-log_absen("✅ Time validation PASSED", ['current_time' => $jam_sekarang]);
 // ========================================================
 
 
@@ -268,31 +278,46 @@ try {
         // ========================================================
         // ADMIN: Tidak perlu validasi lokasi dan shift
         // Admin bisa absen dari mana saja (remote), tidak terikat shift
+        // Admin menggunakan cabang "Kaori HQ" dengan jam kerja flexible (00:00-23:59)
         // ========================================================
         log_absen("👑 ADMIN MODE ACTIVATED - Skip location validation");
         
-        // Ambil data default cabang untuk konsistensi (gunakan cabang pertama)
-        $sql_default_branch = "SELECT id, nama_cabang, nama_shift, latitude, longitude, radius_meter, jam_masuk, jam_keluar FROM cabang LIMIT 1";
-        $default_branch = $pdo->query($sql_default_branch)->fetch();
+        // Ambil cabang "Kaori HQ" khusus untuk admin/remote workers
+        // Cabang ini memiliki radius sangat besar (auto-accept) dan jam flexible
+        $sql_admin_branch = "SELECT id, nama_cabang, nama_shift, latitude, longitude, radius_meter, jam_masuk, jam_keluar 
+                            FROM cabang 
+                            WHERE nama_cabang = 'Kaori HQ' OR nama_shift = 'Flexible' 
+                            LIMIT 1";
+        $admin_branch = $pdo->query($sql_admin_branch)->fetch();
         
-        if (!$default_branch) {
-            log_absen("❌ No branch data found for admin");
-            send_json(['status'=>'error','message'=>'Data cabang tidak ditemukan']);
+        // Fallback: jika cabang Kaori HQ belum dibuat, gunakan cabang manapun (backward compatibility)
+        if (!$admin_branch) {
+            log_absen("⚠️ Kaori HQ branch not found - using fallback");
+            $admin_branch = $pdo->query("SELECT id, nama_cabang, nama_shift, latitude, longitude, radius_meter, jam_masuk, jam_keluar FROM cabang LIMIT 1")->fetch();
         }
         
-        log_absen("✅ Admin default branch assigned", [
-            'branch_id' => $default_branch['id'],
-            'jam_masuk' => $default_branch['jam_masuk'],
-            'jam_keluar' => $default_branch['jam_keluar']
+        if (!$admin_branch) {
+            log_absen("❌ No branch data found for admin");
+            send_json(['status'=>'error','message'=>'Data cabang tidak ditemukan. Hubungi admin untuk setup cabang "Kaori HQ".']);
+        }
+        
+        log_absen("✅ Admin branch assigned: " . $admin_branch['nama_cabang'], [
+            'branch_id' => $admin_branch['id'],
+            'branch_name' => $admin_branch['nama_cabang'],
+            'shift_name' => $admin_branch['nama_shift'],
+            'jam_masuk' => $admin_branch['jam_masuk'],
+            'jam_keluar' => $admin_branch['jam_keluar'],
+            'radius' => $admin_branch['radius_meter']
         ]);
         
-        $shift_terpilih = $default_branch;
-        $status_lokasi = 'Admin - Remote';
-        $jam_masuk_cabang_ini_str = $default_branch['jam_masuk']; // Referensi saja, tidak dipakai untuk validasi
+        $shift_terpilih = $admin_branch;
+        $status_lokasi = 'Remote - ' . $admin_branch['nama_cabang'];
+        $jam_masuk_cabang_ini_str = $admin_branch['jam_masuk']; // Referensi saja (admin flexible)
         
         log_absen("✅ Admin mode: Location validation bypassed", [
             'status_lokasi' => $status_lokasi,
-            'shift_id' => $shift_terpilih['id']
+            'shift_id' => $shift_terpilih['id'],
+            'note' => 'Admin can work remotely from anywhere'
         ]);
         
     } else {
