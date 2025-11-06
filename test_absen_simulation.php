@@ -19,7 +19,7 @@ body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d
 pre { background: #252526; padding: 10px; overflow-x: auto; }
 </style></head><body>";
 
-echo "<h1>🧪 ABSEN SIMULATION TEST</h1>";
+echo "<h1>🧪 ABSEN SIMULATION TEUPDATE register SET id_cabang = 10, outlet_id = 10 WHERE id = 1;ST</h1>";
 echo "<p>Testing proses_absensi.php with simulated POST data</p>";
 
 // Prepare simulation data
