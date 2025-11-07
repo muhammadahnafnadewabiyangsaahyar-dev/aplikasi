@@ -1,3 +1,0 @@
-EDITOR=nano crontab -e
-*/15 * * * * /Applications/XAMPP/xamppfiles/bin/mysqldump -u root --password='' aplikasi > /Applications/XAMPP/xamppfiles/htdocs/aplikasi/aplikasi.sql
-* * * * * /Applications/XAMPP/xamppfiles/htdocs/aplikasi/import_auto.sh

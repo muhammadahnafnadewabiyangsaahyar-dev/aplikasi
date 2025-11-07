@@ -32,7 +32,7 @@ if ($is_logged_in) {
 
     // --- Link untuk SEMUA user yang login (User & Admin) ---
     $profile_url = 'profile.php';
-    $surat_url = 'ajukan_izin_sakit.php'; // Updated: Form baru untuk izin/sakit
+    $surat_url = 'suratizin.php'; // Updated: Form baru untuk izin/sakit
     $absen_url = 'absen.php';
     $rekapabsen_url = 'rekapabsen.php';
     $shift_confirmation_url = 'shift_confirmation.php'; // Konfirmasi shift untuk semua user

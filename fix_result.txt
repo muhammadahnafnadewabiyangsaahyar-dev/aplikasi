@@ -1,7 +1,0 @@
-========================================
-FIX DUPLICATE DATA
-========================================
-
-1. Finding duplicates in pegawai_whitelist...
-
-✅ No duplicates found!

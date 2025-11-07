@@ -2,44 +2,31 @@
 session_start();
 include 'connect.php';
 
-// Enable error logging
-ini_set('log_errors', 1);
-error_log("=== Reset Password Page Loaded ===");
-
 $feedback = '';
 $token = $_GET['token'] ?? '';
 $valid = false;
 $user_id = null;
 
 if ($token) {
-    error_log("Token received: " . substr($token, 0, 10) . "...");
-    
     // Cek token di database
     $stmt = $pdo->prepare('SELECT *, NOW() as current_db_time FROM reset_password WHERE token = ?');
     $stmt->execute([$token]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($row) {
-        error_log("Token found in DB. User ID: " . $row['user_id'] . ", Expires: " . $row['expires_at'] . ", Current: " . $row['current_db_time'] . ", Used: " . $row['used']);
-        
         if ($row['used'] == 1) {
             $feedback = 'Token sudah pernah digunakan.';
-            error_log("Token already used");
         } elseif ($row['expires_at'] <= $row['current_db_time']) {
             $feedback = 'Token sudah kadaluarsa.';
-            error_log("Token expired");
         } else {
             $valid = true;
             $user_id = $row['user_id'];
-            error_log("Token valid!");
         }
     } else {
         $feedback = 'Token tidak ditemukan di database.';
-        error_log("Token not found in database");
     }
 } else {
     $feedback = 'Token tidak ditemukan.';
-    error_log("No token in URL");
 }
 
 if ($valid && $_SERVER['REQUEST_METHOD'] === 'POST') {

@@ -7,8 +7,11 @@ require 'vendor/autoload.php';
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
+// DEBUG: Tampilkan semua error di browser
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 // Enable error logging
-ini_set('display_errors', 0); // Jangan tampilkan error di layar (keamanan)
 ini_set('log_errors', 1);
 error_log("=== Forgot Password Page Loaded ===");
 
@@ -67,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Kirim email reset password via SMTP
             try {
-                error_log("Attempting to send email via PHPMailer...");
+                // Aktifkan debug PHPMailer dan tampilkan output di halaman
                 $mail = new PHPMailer(true);
                 $mail->isSMTP();
                 $mail->Host       = 'smtp.gmail.com';
@@ -76,20 +79,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mail->Password   = 'imjq nmeq vyig umgn'; // Ganti password aplikasi
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
                 $mail->Port       = 465;
-                
+
+                // PHPMailer debug output
+                $mail->SMTPDebug = 0; // 2 = verbose output
+                $mail->Debugoutput = function($str, $level) {
+                    echo "<pre style='color:blue;background:#f0f0f0;border:1px solid #ccc;padding:8px;'>PHPMailer debug: $str</pre>";
+                };
+
                 $mail->setFrom('kaori.aplikasi.notif@gmail.com', 'Sistem KAORI');
                 $mail->addAddress($email);
                 $mail->isHTML(true);
                 $mail->Subject = 'Reset Password KAORI';
                 $mail->Body    = "Klik link berikut untuk reset password Anda:<br><a href='$reset_link'>$reset_link</a><br>Link berlaku 1 jam.";
                 $mail->AltBody = "Reset password: $reset_link (berlaku 1 jam)";
-                
+
                 $mail->send();
-                error_log("SUCCESS: Email sent successfully to " . $email);
                 $feedback = "Link reset password telah dikirim ke email Anda.";
             } catch (Exception $e) {
-                error_log("ERROR: Failed to send email - " . $mail->ErrorInfo);
-                error_log("Exception: " . $e->getMessage());
+                // Tampilkan error PHPMailer dan Exception di halaman
+                echo "<div style='color:red;margin-top:20px;'><strong>PHPMailer Error:</strong> " . htmlspecialchars($mail->ErrorInfo) . "<br><strong>Exception:</strong> " . htmlspecialchars($e->getMessage()) . "</div>";
                 $feedback = 'Gagal mengirim email reset password. Silakan coba lagi.';
             }
         } else {

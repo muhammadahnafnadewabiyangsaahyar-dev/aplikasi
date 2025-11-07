@@ -1,14 +1,14 @@
 <?php
-// Strict error handling for JSON API
-error_reporting(0);
-ini_set('display_errors', 0);
+// DEBUG: Tampilkan semua error di browser
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 
 // Start output buffering immediately
 ob_start();
 
 session_start();
 require_once 'connect.php';
-require_once 'PHPMailer/PHPMailerAutoload.php';
+require 'vendor/autoload.php';
 
 // Clear any previous output
 ob_end_clean();
@@ -69,7 +69,7 @@ $sql_verify = "SELECT sa.*, c.nama_cabang, c.nama_shift, c.jam_masuk, c.jam_kelu
                r.nama_lengkap, r.email
                FROM shift_assignments sa
                JOIN cabang c ON sa.cabang_id = c.id
-               JOIN registrasi r ON sa.user_id = r.id
+               JOIN register r ON sa.user_id = r.id
                WHERE sa.id = ? AND sa.user_id = ?";
 $stmt_verify = $pdo->prepare($sql_verify);
 $stmt_verify->execute([$shift_id, $user_id]);
@@ -106,7 +106,7 @@ if (!$stmt_update->execute([$status, $catatan, $decline_reason, $shift_id])) {
 
 // Get HR and store manager emails
 $sql_recipients = "SELECT DISTINCT r.email, r.nama_lengkap, r.role
-                   FROM registrasi r
+                   FROM register r
                    WHERE r.role IN ('hr', 'kepala_toko') 
                    AND r.email IS NOT NULL 
                    AND r.email != ''";
@@ -251,8 +251,9 @@ foreach ($recipients as $recipient) {
         $emailSuccess++;
         
     } catch (Exception $e) {
-        error_log("Email failed to {$recipient['email']}: {$mail->ErrorInfo}");
         $emailFailed++;
+        // Show error in JSON response for debugging
+        $lastError = $mail->ErrorInfo . ' | Exception: ' . $e->getMessage();
     }
 }
 
@@ -265,8 +266,8 @@ if ($emailSuccess > 0) {
     $message .= ". Email notifikasi telah dikirim ke HR dan Kepala Toko ($emailSuccess berhasil)";
 }
 
-if ($emailFailed > 0) {
-    $message .= " ($emailFailed gagal)";
+if ($emailFailed > 0 && isset($lastError)) {
+    $message .= "<br><strong>Error detail:</strong> " . htmlspecialchars($lastError);
 }
 
 // Clear buffer before final output

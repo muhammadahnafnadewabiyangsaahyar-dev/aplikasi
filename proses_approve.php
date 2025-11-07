@@ -1,8 +1,27 @@
 <?php
+// Global error handler for fatal errors
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'error' => "[FATAL] $errstr in $errfile line $errline"]);
+    exit;
+});
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== NULL) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => "[SHUTDOWN] {$error['message']} in {$error['file']} line {$error['line']}"]);
+        exit;
+    }
+});
+
+// Debug: Start script
+header('Content-Type: application/json');
+echo json_encode(['debug' => 'proses_approve.php started']);
+
 session_start();
 header('Content-Type: application/json'); // Respons selalu JSON
 
-require 'vendor/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php'; // Use require_once to prevent double inclusion
 
 // --- Keamanan ---
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {

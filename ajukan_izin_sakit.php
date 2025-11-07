@@ -25,15 +25,18 @@ $csrf_token = SecurityHelper::generateCSRFToken();
 // 2. Muat Koneksi & Ambil Data User
 include 'connect.php';
 
-// Ambil tanda tangan tersimpan
-$tanda_tangan_tersimpan = null;
-$sql_user_ttd = "SELECT tanda_tangan_file FROM register WHERE id = ?";
-$stmt_user_ttd = $pdo->prepare($sql_user_ttd);
-$stmt_user_ttd->execute([$user_id]);
-$user_ttd_data = $stmt_user_ttd->fetch(PDO::FETCH_ASSOC);
-if ($user_ttd_data) {
-    $tanda_tangan_tersimpan = $user_ttd_data['tanda_tangan_file'];
+// Ambil data user lengkap
+$sql_user = "SELECT * FROM register WHERE id = ?";
+$stmt_user = $pdo->prepare($sql_user);
+$stmt_user->execute([$user_id]);
+$user_data = $stmt_user->fetch(PDO::FETCH_ASSOC);
+
+if (!$user_data) {
+    header('Location: index.php?error=penggunatidakditemukan');
+    exit;
 }
+
+$tanda_tangan_tersimpan = $user_data['tanda_tangan_file'] ?? null;
 
 // Ambil shift yang sudah di-assign untuk user ini (untuk info hari kerja)
 $sql_shifts = "SELECT sa.tanggal_shift, c.nama_shift 
@@ -50,6 +53,62 @@ $upcoming_shifts = $stmt_shifts->fetchAll(PDO::FETCH_ASSOC);
 
 // Convert to JSON for JavaScript
 $shifts_json = json_encode($upcoming_shifts);
+
+// Handle POST pengajuan izin/sakit
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $perihal = $_POST['perihal'] ?? '';
+    $tanggal_izin = $_POST['tanggal_mulai'] ?? '';
+    $tanggal_selesai = $_POST['tanggal_selesai'] ?? '';
+    $lama_izin = $_POST['lama_izin'] ?? '';
+    $alasan_izin = $_POST['alasan'] ?? '';
+
+    // Validasi field wajib
+    if (empty($perihal) || empty($tanggal_izin) || empty($tanggal_selesai) || empty($lama_izin) || empty($alasan_izin)) {
+        header('Location: ajukan_izin_sakit.php?error=datakosong');
+        exit;
+    }
+
+    // Validasi tanda tangan
+    if (empty($tanda_tangan_tersimpan)) {
+        header('Location: ajukan_izin_sakit.php?error=ttdkosong');
+        exit;
+    }
+
+    // Simpan pengajuan ke database
+    $nama_file_surat = '';
+    $sql_insert = "INSERT INTO pengajuan_izin (user_id, perihal, tanggal_mulai, tanggal_selesai, lama_izin, alasan, file_surat, tanda_tangan_file, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending')";
+    $stmt_insert = $pdo->prepare($sql_insert);
+    $stmt_insert->execute([
+        $user_id,
+        $perihal,
+        $tanggal_izin,
+        $tanggal_selesai,
+        $lama_izin,
+        $alasan_izin,
+        $nama_file_surat,
+        $tanda_tangan_tersimpan
+    ]);
+
+    if ($stmt_insert) {
+        // Kirim email notifikasi ke HR dan Kepala Toko
+        require_once __DIR__ . '/email_helper.php';
+        $pengajuan_id = $pdo->lastInsertId();
+        $izin_data = [
+            'id' => $pengajuan_id,
+            'tanggal_mulai' => $tanggal_izin,
+            'tanggal_selesai' => $tanggal_selesai,
+            'durasi_hari' => $lama_izin,
+            'alasan' => $alasan_izin,
+            'jenis_izin' => $perihal
+        ];
+        sendEmailIzinBaru($izin_data, $user_data, $pdo);
+        header('Location: ajukan_izin_sakit.php?success=1');
+        exit;
+    } else {
+        header('Location: ajukan_izin_sakit.php?error=gagalsimpan');
+        exit;
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -195,30 +254,14 @@ $shifts_json = json_encode($upcoming_shifts);
 
     <div class="content-container">
         <h3>Formulir Pengajuan</h3>
-        <form method="POST" action="proses_pengajuan_izin_sakit.php" class="form-surat-izin" id="form-izin-sakit">
-            
+        <form method="POST" action="" class="form-surat-izin" id="form-izin-sakit">
             <!-- CSRF Token -->
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-            
             <!-- Pilih Perihal: Izin atau Sakit -->
             <div class="input-group">
-                <label>Jenis Pengajuan: <span style="color: red;">*</span></label>
-                <div class="perihal-options">
-                    <div class="perihal-option" onclick="selectPerihal('Izin')">
-                        <input type="radio" id="perihal-izin" name="perihal" value="Izin" required>
-                        <i class="fa fa-file-alt" style="color: #2196F3;"></i>
-                        <div class="option-title">Izin</div>
-                        <div class="option-desc">Keperluan pribadi, keluarga, atau urusan penting lainnya</div>
-                    </div>
-                    <div class="perihal-option" onclick="selectPerihal('Sakit')">
-                        <input type="radio" id="perihal-sakit" name="perihal" value="Sakit" required>
-                        <i class="fa fa-briefcase-medical" style="color: #f44336;"></i>
-                        <div class="option-title">Sakit</div>
-                        <div class="option-desc">Kondisi kesehatan yang tidak memungkinkan bekerja</div>
-                    </div>
-                </div>
+                <label for="perihal">Perihal: <span style="color: red;">*</span></label>
+                <input type="text" id="perihal" name="perihal" required placeholder="Contoh: Izin, Sakit, Cuti, dll" style="width:100%;padding:8px;margin:10px 0;">
             </div>
-
             <div class="input-group">
                 <label for="tanggal_mulai">Tanggal Mulai: <span style="color: red;">*</span></label>
                 <input type="date" id="tanggal_mulai" name="tanggal_mulai" required min="<?php echo date('Y-m-d'); ?>">

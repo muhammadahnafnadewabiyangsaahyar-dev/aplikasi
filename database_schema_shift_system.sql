@@ -1,0 +1,4 @@
+-- KAORI Employee Management System - Complete Database Schema
+-- ========================================================
+-- This schema includes all tables needed for the comprehensive
+-- employee management system with shift management, attendance,
